@@ -58,7 +58,9 @@
             color: var(--accent-main);
             margin-top: 0;
         }
-        .form-group { margin-bottom: 20px; }
+        .form-group {
+            margin-bottom: 20px;
+        }
         label {
             display: block;
             margin-bottom: 8px;
@@ -82,13 +84,10 @@
             border-color: var(--accent-main);
             box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
         }
-        select option { background: #1a1a1a; color: white; }
-        .date-row {
-            display: flex;
-            gap: 10px;
+        select option {
+            background: #1a1a1a;
+            color: white;
         }
-        .date-row input { flex: 1; }
-        .date-row select { flex: 2; }
         .btn-group {
             display: flex;
             gap: 12px;
@@ -109,12 +108,16 @@
             color: var(--accent-main);
             border: 1px solid var(--border-accent);
         }
-        .btn-process:hover { background: rgba(255, 107, 0, 0.25); }
+        .btn-process:hover {
+            background: rgba(255, 107, 0, 0.25);
+        }
         .btn-download {
             background: var(--accent-main);
             color: #0f0f0f;
         }
-        .btn-download:hover { background: var(--accent-hover); }
+        .btn-download:hover {
+            background: var(--accent-hover);
+        }
         .btn-download:disabled {
             background: rgba(255, 107, 0, 0.3);
             color: rgba(255, 255, 255, 0.4);
@@ -171,9 +174,9 @@
 
         <div class="form-group">
             <label>2. Fecha</label>
-            <div class="date-row">
-                <input type="number" id="day" placeholder="Día" min="1" max="31">
-                <select id="month">
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="day" placeholder="Día" min="1" max="31" style="flex: 1;">
+                <select id="month" style="flex: 2;">
                     <option value="1">Enero</option>
                     <option value="2">Febrero</option>
                     <option value="3">Marzo</option>
@@ -208,11 +211,11 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn-process" onclick="processFile()">&#9881;&#65039; Procesar</button>
-            <button class="btn-download" id="btnDownload" onclick="downloadFile()" disabled>&#11015;&#65039; Descargar Excel</button>
+            <button class="btn-process" onclick="processFile()">⚙️ Procesar</button>
+            <button id="btnDownload" class="btn-download" onclick="downloadFile()" disabled>⬇️ Descargar Excel</button>
         </div>
 
-        <div class="status" id="status"></div>
+        <div id="status" class="status"></div>
     </div>
 
     <script>
@@ -220,14 +223,12 @@
         document.getElementById('day').value = now.getDate();
         document.getElementById('month').value = now.getMonth() + 1;
 
+        let originalFileBuffer = null;
+        let originalFileName = '';
         let processedWorkbook = null;
-        let processedFileName = '';
 
         async function processFile() {
             const fileEl = document.getElementById('fileInput');
-            const status = document.getElementById('status');
-            const btnDownload = document.getElementById('btnDownload');
-
             if (!fileEl.files[0]) {
                 showStatus('Por favor, selecciona el archivo Excel primero.', 'error');
                 return;
@@ -235,20 +236,37 @@
 
             const day = parseInt(document.getElementById('day').value);
             const monthSelect = document.getElementById('month');
-            const monthIdx = monthSelect.value;
             const monthName = monthSelect.options[monthSelect.selectedIndex].text;
             const colIdx = parseInt(document.getElementById('shift').value);
             const coverage = document.getElementById('coverage').value;
 
+            originalFileName = fileEl.files[0].name;
             const reader = new FileReader();
+            
             reader.onload = async (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellStyles: true, bookVBA: true });
+                    
+                    // CRÍTICO: Usar cellStyles: true y otros flags para intentar mantener el formato
+                    // Nota: SheetJS Community (la versión CDN) tiene soporte limitado para estilos.
+                    // Para preservación TOTAL del formato original al escribir, lo ideal es usar la técnica de
+                    // cargar el archivo, modificar los valores de las celdas directamente en el objeto de la hoja
+                    // y exportar intentando mantener los metadatos.
+                    
+                    const workbook = XLSX.read(data, { 
+                        type: 'array',
+                        cellStyles: true,
+                        cellFormulas: true,
+                        cellDates: true,
+                        cellNF: true,
+                        bookVBA: true
+                    });
 
-                    const sheetName = workbook.SheetNames.find(n =>
-                        n.toLowerCase().startsWith(monthName.toLowerCase().substring(0, 3))
+                    const monthShort = monthName.toLowerCase().substring(0, 3);
+                    const sheetName = workbook.SheetNames.find(n => 
+                        n.toLowerCase().includes(monthShort)
                     );
+
                     if (!sheetName) {
                         showStatus('No se encontró la hoja del mes: ' + monthName, 'error');
                         return;
@@ -256,11 +274,11 @@
 
                     const ws = workbook.Sheets[sheetName];
                     const range = XLSX.utils.decode_range(ws['!ref']);
+                    
                     let foundRow = -1;
-
                     for (let i = range.s.r; i <= range.e.r; i++) {
                         const cell = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
-                        if (cell && cell.v == day) {
+                        if (cell && (cell.v == day || cell.w == day)) {
                             foundRow = i;
                             break;
                         }
@@ -271,30 +289,32 @@
                         return;
                     }
 
-                    const cellShift = XLSX.utils.encode_cell({ r: foundRow, c: colIdx - 1 });
-                    const cellCov = XLSX.utils.encode_cell({ r: foundRow, c: 15 });
-                    ws[cellShift] = { v: 'X', t: 's' };
-                    ws[cellCov] = { v: coverage, t: 's' };
+                    // Modificar celdas manteniendo el objeto original si existe (para no perder el estilo de esa celda)
+                    const shiftCellAddr = XLSX.utils.encode_cell({ r: foundRow, c: colIdx - 1 });
+                    const covCellAddr = XLSX.utils.encode_cell({ r: foundRow, c: 15 }); // Columna P (15)
+
+                    if (!ws[shiftCellAddr]) ws[shiftCellAddr] = { t: 's' };
+                    ws[shiftCellAddr].v = 'X';
+                    
+                    if (!ws[covCellAddr]) ws[covCellAddr] = { t: 's' };
+                    ws[covCellAddr].v = coverage;
 
                     processedWorkbook = workbook;
-                    processedFileName = `Horas_Extra_${day}_${monthName}.xlsx`;
-
-                    btnDownload.disabled = false;
-                    showStatus(`✅ Archivo procesado correctamente. Día ${day} de ${monthName} — ${coverage}`, 'success');
+                    document.getElementById('btnDownload').disabled = false;
+                    showStatus(\`✅ Procesado: Día \${day} de \${monthName} - \${coverage}\`, 'success');
                 } catch (err) {
-                    showStatus('Error al procesar el archivo: ' + err.message, 'error');
+                    console.error(err);
+                    showStatus('Error al procesar: ' + err.message, 'error');
                 }
             };
             reader.readAsArrayBuffer(fileEl.files[0]);
         }
 
         function downloadFile() {
-            if (!processedWorkbook) {
-                showStatus('Primero procesa el archivo antes de descargar.', 'error');
-                return;
-            }
-            XLSX.writeFile(processedWorkbook, processedFileName);
-            showStatus(`⬇️ Descargando: ${processedFileName}`, 'success');
+            if (!processedWorkbook) return;
+            // Usar el nombre original para que sea más fácil de reemplazar
+            XLSX.writeFile(processedWorkbook, originalFileName);
+            showStatus('⬇️ Archivo descargado. Reemplaza el original para mantener tus cambios.', 'success');
         }
 
         function showStatus(msg, type) {
