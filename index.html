@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horas Extraordinarias - Registro Excel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header .icon { font-size: 64px; margin-bottom: 16px; }
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    .header p {
+      color: #a0aec0;
+      font-size: 1rem;
+    }
+    .card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #63b3ed;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .steps { list-style: none; counter-reset: step-counter; }
+    .steps li {
+      counter-increment: step-counter;
+      padding: 10px 0 10px 44px;
+      position: relative;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 10px;
+      background: #3182ce;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(99,179,237,0.2);
+      color: #63b3ed;
+      border: 1px solid rgba(99,179,237,0.4);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.85rem;
+      font-family: monospace;
+      margin: 2px;
+    }
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #3182ce, #2b6cb0);
+      color: white;
+      text-decoration: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 8px 0;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(49,130,206,0.4);
+    }
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(49,130,206,0.6);
+    }
+    .req-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .req-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .req-item .req-icon { font-size: 28px; margin-bottom: 6px; }
+    .req-item .req-name { font-weight: 600; font-size: 0.9rem; }
+    .req-item .req-desc { color: #a0aec0; font-size: 0.8rem; margin-top: 4px; }
+    .install-block {
+      background: #1a202c;
+      border-radius: 10px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: #68d391;
+      margin-top: 12px;
+      border-left: 4px solid #3182ce;
+    }
+    .install-block .comment { color: #718096; }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      color: #4a5568;
+      font-size: 0.85rem;
+    }
+    .footer a { color: #63b3ed; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="icon">📊</div>
+      <h1>Horas Extraordinarias</h1>
+      <p>Registro automatizado en parte oficial Excel</p>
+    </div>
+
+    <div class="card">
+      <h2>⬇️ Descargar aplicacion</h2>
+      <a class="download-btn" href="https://github.com/pikinaita/horas-extras-excel/archive/refs/heads/main.zip">
+        ⬇️ Descargar ZIP del proyecto
+      </a>
+      <p style="color:#a0aec0; font-size:0.85rem; margin-top:10px; text-align:center;">Extrae el ZIP y sigue los pasos de instalacion</p>
+    </div>
+
+    <div class="card">
+      <h2>📋 Requisitos previos</h2>
+      <div class="req-grid">
+        <div class="req-item">
+          <div class="req-icon">🐍</div>
+          <div class="req-name">Python 3.8+</div>
+          <div class="req-desc">python.org</div>
+        </div>
+        <div class="req-item">
+          <div class="req-icon">📦</div>
+          <div class="req-name">openpyxl</div>
+          <div class="req-desc">Manejo de Excel</div>
+        </div>
+        <div class="req-item">
+          <div class="req-icon">🗂️</div>
+          <div class="req-name">tkinter</div>
+          <div class="req-desc">Selector de archivo (incluido en Python)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🚀 Instalacion y uso</h2>
+      <ol class="steps">
+        <li>Descarga el ZIP y extraelo en una carpeta de tu eleccion</li>
+        <li>Abre una terminal en esa carpeta e instala dependencias:<div class="install-block"><span class="comment"># Instalar dependencias</span><br>pip install -r requirements.txt</div></li>
+        <li>Ejecuta la aplicacion:<div class="install-block">python main.py</div></li>
+        <li>La primera vez se abrira el explorador de archivos: selecciona tu <strong>parte mensual Excel</strong></li>
+        <li>Indica el <strong>dia</strong> y el <strong>mes</strong> que quieres registrar</li>
+        <li>Elige el <strong>turno</strong>: <span class="badge">Manana</span> <span class="badge">Tarde</span> <span class="badge">Noche</span></li>
+        <li>Indica si es <span class="badge">Sustitucion Operador</span> o <span class="badge">Sustitucion Jefe de Turno</span></li>
+        <li>La app marca la <strong>X</strong> en la celda correcta y guarda el archivo conservando todo el formato</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>ℹ️ Como funciona</h2>
+      <ol class="steps">
+        <li>Busca la hoja del mes por prefijo (ej: <span class="badge">Enero</span>, <span class="badge">Feb</span>)</li>
+        <li>Localiza la fila por el dia en la columna A (compatible con formulas <span class="badge">=DIA()</span>)</li>
+        <li>Columna <span class="badge">C</span> = Manana &nbsp; <span class="badge">D</span> = Tarde &nbsp; <span class="badge">E</span> = Noche</li>
+        <li>Columnas <span class="badge">P:Q:R:S</span> (combinadas) = Tipo de sustitucion</li>
+        <li>Preserva 100% el formato original del Excel (estilos, formulas, celdas combinadas)</li>
+      </ol>
+    </div>
+
+    <div class="footer">
+      <p>Repositorio: <a href="https://github.com/pikinaita/horas-extras-excel">github.com/pikinaita/horas-extras-excel</a></p>
+      <p style="margin-top:6px;">Proyecto personal &mdash; pikinaita</p>
+    </div>
+  </div>
+</body>
+</html>
