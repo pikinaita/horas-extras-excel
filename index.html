@@ -45,69 +45,60 @@
             border: 1px solid var(--border-accent);
             box-shadow: 0 8px 32px rgba(255, 107, 0, 0.15);
         }
-        .header {
-            background: rgba(255, 107, 0, 0.12);
-            backdrop-filter: blur(12px);
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            text-align: center;
-            border: 1px solid var(--border-accent);
-        }
-        h1 { font-size: 24px; font-weight: 700; color: var(--accent-main); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .header { margin-bottom: 24px; text-align: center; }
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
         .form-group { margin-bottom: 20px; }
-        label { display: block; font-size: 13px; font-weight: 600; color: var(--accent-light); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        input[type="text"], input[type="number"], select {
+        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--accent-light); }
+        select, input {
             width: 100%;
+            padding: 12px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px 16px;
             border-radius: 12px;
             color: white;
             font-size: 16px;
-            transition: all 0.3s ease;
+            outline: none;
+            transition: all 0.2s;
         }
-        input:focus, select:focus { outline: none; border-color: var(--accent-main); background: rgba(255, 107, 0, 0.05); }
+        select:focus, input:focus { border-color: var(--accent-main); background: rgba(255, 255, 255, 0.08); }
         .btn {
             width: 100%;
             padding: 16px;
-            border-radius: 14px;
             border: none;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-bottom: 12px;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
         }
-        .btn-primary { background: var(--accent-main); color: #0f0f0f; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3); }
-        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); }
-        .btn-primary:active { transform: translateY(0); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { margin-top: 20px; padding: 12px; border-radius: 10px; font-size: 14px; text-align: center; display: none; }
-        .success { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
-        .error { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
+        .btn-primary { background: var(--accent-main); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; margin-bottom: 12px; }
+        #status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+        .status-success { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
+        .status-error { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>⏲️ Horas Extras</h1>
-        </div>
-
+        <div class="header"><h1>⏲️ Horas Extras</h1></div>
         <div class="form-group">
             <label>1. Seleccionar Excel original</label>
-            <input type="file" id="fileInput" accept=".xlsx" style="display: none">
-            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
-                📁 Seleccionar Archivo
-            </button>
-            <div id="fileName" style="font-size: 12px; color: var(--text-muted); margin-top: 5px; text-align: center;">Ningún archivo seleccionado</div>
+            <input type="file" id="fileInput" accept=".xlsx" style="display: none;">
+            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Seleccionar Archivo</button>
+            <div id="fileName" style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 4px;">Ningún archivo seleccionado</div>
         </div>
-
         <div class="form-group">
             <label>2. Mes y Día</label>
             <div style="display: flex; gap: 10px;">
@@ -128,7 +119,6 @@
                 <input type="number" id="dayInput" placeholder="Día" min="1" max="31" style="flex: 1;">
             </div>
         </div>
-
         <div class="form-group">
             <label>3. Turno y Cobertura</label>
             <select id="shiftSelect" style="margin-bottom: 10px;">
@@ -141,12 +131,9 @@
                 <option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
             </select>
         </div>
-
         <button class="btn btn-primary" id="btnProcess">⚙️ Procesar y Descargar</button>
-        
         <div id="status"></div>
     </div>
-
     <script>
         const fileInput = document.getElementById('fileInput');
         const fileNameDiv = document.getElementById('fileName');
@@ -155,85 +142,75 @@
 
         const now = new Date();
         document.getElementById('dayInput').value = now.getDate();
-        const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
         document.getElementById('monthSelect').value = months[now.getMonth()];
 
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                fileNameDiv.textContent = '✅ ' + e.target.files[0].name;
-            }
+            if (e.target.files.length > 0) fileNameDiv.textContent = '✅ ' + e.target.files[0].name;
         });
 
         function showStatus(msg, type) {
             statusDiv.textContent = msg;
             statusDiv.style.display = 'block';
-            statusDiv.className = 'status ' + type;
-            if (type === 'success') statusDiv.style.backgroundColor = 'rgba(52, 199, 89, 0.15)';
-            if (type === 'error') statusDiv.style.backgroundColor = 'rgba(255, 59, 48, 0.15)';
+            statusDiv.className = 'status-' + type;
+            if (!type) statusDiv.style.display = 'block';
         }
 
         btnProcess.addEventListener('click', async () => {
             const file = fileInput.files[0];
-            if (!file) {
-                showStatus('⚠️ Selecciona primero el archivo Excel', 'error');
-                return;
-            }
+            if (!file) { showStatus('⚠️ Selecciona el archivo Excel', 'error'); return; }
 
             const month = document.getElementById('monthSelect').value;
             const day = parseInt(document.getElementById('dayInput').value);
             const shiftCol = parseInt(document.getElementById('shiftSelect').value);
             const coverage = document.getElementById('coverageSelect').value;
 
-            if (!day || day < 1 || day > 31) {
-                showStatus('⚠️ Indica un día válido', 'error');
-                return;
-            }
-
             showStatus('⏳ Procesando...', '');
 
             try {
                 const workbook = new ExcelJS.Workbook();
-                const arrayBuffer = await file.arrayBuffer();
-                await workbook.xlsx.load(arrayBuffer);
+                await workbook.xlsx.load(await file.arrayBuffer());
 
                 let worksheet = null;
-                workbook.eachSheet((sheet) => {
-                    if (sheet.name.toUpperCase().startsWith(month)) {
-                        worksheet = sheet;
-                    }
-                });
+                workbook.eachSheet(s => { if (s.name.toUpperCase().startsWith(month)) worksheet = s; });
 
-                if (!worksheet) {
-                    showStatus(`❌ No se encontró la hoja para ${month}`, 'error');
-                    return;
-                }
+                if (!worksheet) { showStatus(`❌ No se encontró la hoja para ${month}`, 'error'); return; }
 
                 let rowToEdit = -1;
-                worksheet.eachRow((row, rowNumber) => {
-                    const cellVal = row.getCell(2).value;
-                    if (cellVal == day) {
-                        rowToEdit = rowNumber;
+                const fallbackRow = day + 6;
+                
+                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                    const cell = row.getCell(2);
+                    let val = cell.value;
+                    let numVal = null;
+
+                    if (cell.type === 4 || val instanceof Date) numVal = (val instanceof Date ? val : val).getDate();
+                    else if (cell.type === 6) {
+                        const r = cell.result;
+                        if (r instanceof Date) numVal = r.getDate();
+                        else if (typeof r === 'number') numVal = r;
+                    } else if (typeof val === 'number') numVal = val;
+                    else if (typeof val === 'string') {
+                        const p = parseInt(val.trim());
+                        if (!isNaN(p)) numVal = p;
                     }
+
+                    if (numVal === rowNumber && numVal !== fallbackRow && rowNumber < 32) numVal = null;
+                    if (numVal === day) rowToEdit = rowNumber;
                 });
 
-                if (rowToEdit !== -1) {
-                    const row = worksheet.getRow(rowToEdit);
-                    row.getCell(shiftCol).value = 'X';
-                    row.getCell(16).value = coverage;
-                    row.commit();
-                } else {
-                    const estimatedRow = day + 6;
-                    const row = worksheet.getRow(estimatedRow);
-                    row.getCell(shiftCol).value = 'X';
-                    row.getCell(16).value = coverage;
-                    row.commit();
-                }
+                if (rowToEdit === -1) rowToEdit = fallbackRow;
+
+                showStatus(`📝 Editando día ${day} en fila ${rowToEdit}...`, '');
+                
+                const row = worksheet.getRow(rowToEdit);
+                [3, 4, 5].forEach(c => row.getCell(c).value = null);
+                row.getCell(shiftCol).value = 'X';
+                row.getCell(16).value = coverage;
 
                 const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                saveAs(blob, `Horas_${month}_Dia_${day}.xlsx`);
-
-                showStatus('✅ ¡Procesado con éxito! Se ha descargado el archivo.', 'success');
+                saveAs(new Blob([buffer]), `Horas_${month}_Dia_${day}.xlsx`);
+                showStatus('✅ ¡Procesado con éxito!', 'success');
             } catch (err) {
                 console.error(err);
                 showStatus('❌ Error: ' + err.message, 'error');
