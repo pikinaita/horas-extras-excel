@@ -2,65 +2,168 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Horas Extra">
+    <meta name="theme-color" content="#ff6b00">
     <title>Horas Extraordinarias</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --card: #ffffff;
+            --bg-primary: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            --bg-glass: rgba(26, 26, 26, 0.95);
+            --accent-main: #ff6b00;
+            --accent-hover: #ff8c00;
+            --accent-light: #ffab70;
+            --text-primary: #ffffff;
+            --text-muted: #ff8c00;
+            --border-accent: rgba(255, 107, 0, 0.3);
         }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
-            font-family: -apple-system, system-ui, sans-serif;
-            background: var(--bg);
-            margin: 0;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
         }
         .container {
             width: 100%;
             max-width: 500px;
-            background: var(--card);
+            background: var(--bg-glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            border: 1px solid var(--border-accent);
+            box-shadow: 0 8px 32px rgba(255, 107, 0, 0.15);
         }
-        h1 { font-size: 1.5rem; text-align: center; color: #1e293b; margin-top: 0; }
+        .header {
+            background: rgba(255, 107, 0, 0.12);
+            backdrop-filter: blur(12px);
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+            border: 1px solid var(--border-accent);
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-main);
+            margin-top: 0;
+        }
         .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-size: 0.9rem;
+        }
         input, select {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
             box-sizing: border-box;
             font-size: 1rem;
+            background: rgba(15, 15, 15, 0.9);
+            color: var(--text-primary);
+            -webkit-appearance: none;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-main);
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
+        }
+        select option { background: #1a1a1a; color: white; }
+        .date-row {
+            display: flex;
+            gap: 10px;
+        }
+        .date-row input { flex: 1; }
+        .date-row select { flex: 2; }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
         }
         button {
-            width: 100%;
+            flex: 1;
             padding: 14px;
-            background: var(--primary);
-            color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
+            border-radius: 14px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 10px;
+            transition: all 0.2s ease;
         }
-        .status { margin-top: 20px; padding: 12px; border-radius: 8px; display: none; text-align: center; }
-        .success { display: block; background: #dcfce7; color: #166534; }
+        .btn-process {
+            background: rgba(255, 107, 0, 0.15);
+            color: var(--accent-main);
+            border: 1px solid var(--border-accent);
+        }
+        .btn-process:hover { background: rgba(255, 107, 0, 0.25); }
+        .btn-download {
+            background: var(--accent-main);
+            color: #0f0f0f;
+        }
+        .btn-download:hover { background: var(--accent-hover); }
+        .btn-download:disabled {
+            background: rgba(255, 107, 0, 0.3);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 12px;
+            display: none;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .status.success {
+            display: block;
+            background: rgba(255, 107, 0, 0.15);
+            color: var(--accent-light);
+            border: 1px solid var(--border-accent);
+        }
+        .status.error {
+            display: block;
+            background: rgba(220, 38, 38, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        input[type="file"] {
+            padding: 10px;
+            cursor: pointer;
+            color: var(--accent-light);
+        }
+        input[type="file"]::-webkit-file-upload-button {
+            background: var(--accent-main);
+            color: #0f0f0f;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🕒 Horas Extras</h1>
-        
+        <div class="header">
+            <h1>⏲️ Horas Extras</h1>
+        </div>
+
         <div class="form-group">
             <label>1. Seleccionar Excel original</label>
             <input type="file" id="fileInput" accept=".xlsx">
@@ -68,7 +171,7 @@
 
         <div class="form-group">
             <label>2. Fecha</label>
-            <div style="display: flex; gap: 10px;">
+            <div class="date-row">
                 <input type="number" id="day" placeholder="Día" min="1" max="31">
                 <select id="month">
                     <option value="1">Enero</option>
@@ -104,65 +207,100 @@
             </select>
         </div>
 
-        <button onclick="process()">Actualizar y Descargar</button>
-        <div id="status" class="status"></div>
+        <div class="btn-group">
+            <button class="btn-process" onclick="processFile()">&#9881;&#65039; Procesar</button>
+            <button class="btn-download" id="btnDownload" onclick="downloadFile()" disabled>&#11015;&#65039; Descargar Excel</button>
+        </div>
+
+        <div class="status" id="status"></div>
     </div>
 
     <script>
-        // Establecer fecha actual por defecto
         const now = new Date();
         document.getElementById('day').value = now.getDate();
         document.getElementById('month').value = now.getMonth() + 1;
 
-        async function process() {
+        let processedWorkbook = null;
+        let processedFileName = '';
+
+        async function processFile() {
             const fileEl = document.getElementById('fileInput');
-            if(!fileEl.files[0]) return alert('Selecciona el archivo Excel');
-            
+            const status = document.getElementById('status');
+            const btnDownload = document.getElementById('btnDownload');
+
+            if (!fileEl.files[0]) {
+                showStatus('Por favor, selecciona el archivo Excel primero.', 'error');
+                return;
+            }
+
             const day = parseInt(document.getElementById('day').value);
-            const monthIdx = document.getElementById('month').value;
-            const monthName = document.getElementById('month').options[document.getElementById('month').selectedIndex].text;
+            const monthSelect = document.getElementById('month');
+            const monthIdx = monthSelect.value;
+            const monthName = monthSelect.options[monthSelect.selectedIndex].text;
             const colIdx = parseInt(document.getElementById('shift').value);
             const coverage = document.getElementById('coverage').value;
 
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array', cellStyles: true, bookVBA: true});
-                
-                // Buscar hoja
-                const sheetName = workbook.SheetNames.find(n => n.toLowerCase().startsWith(monthName.toLowerCase().substring(0,3)));
-                if(!sheetName) return alert('No se encontró la hoja del mes');
-                
-                const ws = workbook.Sheets[sheetName];
-                
-                // Buscar fila del día (asumiendo Col A tiene el número de día)
-                const range = XLSX.utils.decode_range(ws['!ref']);
-                let foundRow = -1;
-                for(let i = range.s.r; i <= range.e.r; i++) {
-                    const cell = ws[XLSX.utils.encode_cell({r: i, c: 0})];
-                    if(cell && cell.v == day) {
-                        foundRow = i;
-                        break;
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellStyles: true, bookVBA: true });
+
+                    const sheetName = workbook.SheetNames.find(n =>
+                        n.toLowerCase().startsWith(monthName.toLowerCase().substring(0, 3))
+                    );
+                    if (!sheetName) {
+                        showStatus('No se encontró la hoja del mes: ' + monthName, 'error');
+                        return;
                     }
+
+                    const ws = workbook.Sheets[sheetName];
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    let foundRow = -1;
+
+                    for (let i = range.s.r; i <= range.e.r; i++) {
+                        const cell = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
+                        if (cell && cell.v == day) {
+                            foundRow = i;
+                            break;
+                        }
+                    }
+
+                    if (foundRow === -1) {
+                        showStatus('No se encontró la fila del día ' + day, 'error');
+                        return;
+                    }
+
+                    const cellShift = XLSX.utils.encode_cell({ r: foundRow, c: colIdx - 1 });
+                    const cellCov = XLSX.utils.encode_cell({ r: foundRow, c: 15 });
+                    ws[cellShift] = { v: 'X', t: 's' };
+                    ws[cellCov] = { v: coverage, t: 's' };
+
+                    processedWorkbook = workbook;
+                    processedFileName = `Horas_Extra_${day}_${monthName}.xlsx`;
+
+                    btnDownload.disabled = false;
+                    showStatus(`✅ Archivo procesado correctamente. Día ${day} de ${monthName} — ${coverage}`, 'success');
+                } catch (err) {
+                    showStatus('Error al procesar el archivo: ' + err.message, 'error');
                 }
-
-                if(foundRow === -1) return alert('No se encontró la fila del día');
-
-                // Escribir X en turno y texto en cobertura (Col P = 15)
-                const cellShift = XLSX.utils.encode_cell({r: foundRow, c: colIdx - 1});
-                const cellCov = XLSX.utils.encode_cell({r: foundRow, c: 15});
-                
-                ws[cellShift] = { v: 'X', t: 's' };
-                ws[cellCov] = { v: coverage, t: 's' };
-
-                // Descargar
-                XLSX.writeFile(workbook, `Horas_Extra_${day}_${monthName}.xlsx`);
-                
-                const status = document.getElementById('status');
-                status.innerText = "¡Excel actualizado correctamente!";
-                status.className = "status success";
             };
             reader.readAsArrayBuffer(fileEl.files[0]);
+        }
+
+        function downloadFile() {
+            if (!processedWorkbook) {
+                showStatus('Primero procesa el archivo antes de descargar.', 'error');
+                return;
+            }
+            XLSX.writeFile(processedWorkbook, processedFileName);
+            showStatus(`⬇️ Descargando: ${processedFileName}`, 'success');
+        }
+
+        function showStatus(msg, type) {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = 'status ' + type;
         }
     </script>
 </body>
