@@ -1,0 +1,23 @@
+# Configuración local (ruta del archivo, no subir)
+config.json
+
+# Archivos Excel (datos personales, no subir)
+*.xlsx
+*.xls
+*.xlsm
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+*.swp
