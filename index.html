@@ -153,11 +153,7 @@
             background: var(--accent-main);
             color: #0f0f0f;
             border: none;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-right: 10px;
+            padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 10px;
         }
     </style>
 </head>
@@ -166,66 +162,49 @@
         <div class="header">
             <h1>⏲️ Horas Extras</h1>
         </div>
-
         <div class="form-group">
             <label>1. Seleccionar Excel original</label>
             <input type="file" id="fileInput" accept=".xlsx">
         </div>
-
         <div class="form-group">
             <label>2. Fecha</label>
             <div style="display: flex; gap: 10px;">
                 <input type="number" id="day" placeholder="Día" min="1" max="31" style="flex: 1;">
                 <select id="month" style="flex: 2;">
-                    <option value="1">Enero</option>
-                    <option value="2">Febrero</option>
-                    <option value="3">Marzo</option>
-                    <option value="4">Abril</option>
-                    <option value="5">Mayo</option>
-                    <option value="6">Junio</option>
-                    <option value="7">Julio</option>
-                    <option value="8">Agosto</option>
-                    <option value="9">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
+                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
                 </select>
             </div>
         </div>
-
         <div class="form-group">
             <label>3. Turno</label>
             <select id="shift">
-                <option value="3">Mañana (Col C)</option>
-                <option value="4">Tarde (Col D)</option>
-                <option value="5">Noche (Col E)</option>
+                <option value="3">Mañana (Col C)</option><option value="4">Tarde (Col D)</option><option value="5">Noche (Col E)</option>
             </select>
         </div>
-
         <div class="form-group">
             <label>4. Cobertura</label>
             <select id="coverage">
-                <option value="Sustitución Operador">Sustitución Operador</option>
-                <option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
+                <option value="Sustitución Operador">Sustitución Operador</option><option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
             </select>
         </div>
-
         <div class="btn-group">
             <button class="btn-process" onclick="processFile()">⚙️ Procesar</button>
             <button id="btnDownload" class="btn-download" onclick="downloadFile()" disabled>⬇️ Descargar Excel</button>
         </div>
-
         <div id="status" class="status"></div>
     </div>
-
     <script>
         const now = new Date();
         document.getElementById('day').value = now.getDate();
         document.getElementById('month').value = now.getMonth() + 1;
-
-        let originalFileBuffer = null;
         let originalFileName = '';
         let processedWorkbook = null;
+
+        function showStatus(msg, type) {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = 'status ' + type;
+        }
 
         async function processFile() {
             const fileEl = document.getElementById('fileInput');
@@ -233,40 +212,28 @@
                 showStatus('Por favor, selecciona el archivo Excel primero.', 'error');
                 return;
             }
-
             const day = parseInt(document.getElementById('day').value);
             const monthSelect = document.getElementById('month');
             const monthName = monthSelect.options[monthSelect.selectedIndex].text;
             const colIdx = parseInt(document.getElementById('shift').value);
             const coverage = document.getElementById('coverage').value;
-
             originalFileName = fileEl.files[0].name;
+
             const reader = new FileReader();
-            
             reader.onload = async (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    
-                    // CRÍTICO: Usar cellStyles: true y otros flags para intentar mantener el formato
-                    // Nota: SheetJS Community (la versión CDN) tiene soporte limitado para estilos.
-                    // Para preservación TOTAL del formato original al escribir, lo ideal es usar la técnica de
-                    // cargar el archivo, modificar los valores de las celdas directamente en el objeto de la hoja
-                    // y exportar intentando mantener los metadatos.
-                    
+                    // Para preservar formato, es VITAL leer con cellStyles: true
                     const workbook = XLSX.read(data, { 
-                        type: 'array',
+                        type: 'array', 
                         cellStyles: true,
-                        cellFormulas: true,
-                        cellDates: true,
                         cellNF: true,
+                        cellDates: true,
                         bookVBA: true
                     });
 
                     const monthShort = monthName.toLowerCase().substring(0, 3);
-                    const sheetName = workbook.SheetNames.find(n => 
-                        n.toLowerCase().includes(monthShort)
-                    );
-
+                    const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes(monthShort));
                     if (!sheetName) {
                         showStatus('No se encontró la hoja del mes: ' + monthName, 'error');
                         return;
@@ -274,7 +241,6 @@
 
                     const ws = workbook.Sheets[sheetName];
                     const range = XLSX.utils.decode_range(ws['!ref']);
-                    
                     let foundRow = -1;
                     for (let i = range.s.r; i <= range.e.r; i++) {
                         const cell = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
@@ -289,22 +255,23 @@
                         return;
                     }
 
-                    // Modificar celdas manteniendo el objeto original si existe (para no perder el estilo de esa celda)
                     const shiftCellAddr = XLSX.utils.encode_cell({ r: foundRow, c: colIdx - 1 });
-                    const covCellAddr = XLSX.utils.encode_cell({ r: foundRow, c: 15 }); // Columna P (15)
+                    const covCellAddr = XLSX.utils.encode_cell({ r: foundRow, c: 15 }); // Columna P
 
+                    // Modificamos solo el valor (v) y el texto formateado (w), manteniendo el estilo original (s)
                     if (!ws[shiftCellAddr]) ws[shiftCellAddr] = { t: 's' };
                     ws[shiftCellAddr].v = 'X';
-                    
+                    delete ws[shiftCellAddr].w;
+
                     if (!ws[covCellAddr]) ws[covCellAddr] = { t: 's' };
                     ws[covCellAddr].v = coverage;
+                    delete ws[covCellAddr].w;
 
                     processedWorkbook = workbook;
                     document.getElementById('btnDownload').disabled = false;
                     showStatus(\`✅ Procesado: Día \${day} de \${monthName} - \${coverage}\`, 'success');
                 } catch (err) {
-                    console.error(err);
-                    showStatus('Error al procesar: ' + err.message, 'error');
+                    showStatus('Error: ' + err.message, 'error');
                 }
             };
             reader.readAsArrayBuffer(fileEl.files[0]);
@@ -312,15 +279,9 @@
 
         function downloadFile() {
             if (!processedWorkbook) return;
-            // Usar el nombre original para que sea más fácil de reemplazar
+            // XLSX.writeFile mantiene gran parte del formato si se leyó con cellStyles: true
             XLSX.writeFile(processedWorkbook, originalFileName);
-            showStatus('⬇️ Archivo descargado. Reemplaza el original para mantener tus cambios.', 'success');
-        }
-
-        function showStatus(msg, type) {
-            const status = document.getElementById('status');
-            status.textContent = msg;
-            status.className = 'status ' + type;
+            showStatus('⬇️ Descargado. Reemplaza el original en Dropbox.', 'success');
         }
     </script>
 </body>
