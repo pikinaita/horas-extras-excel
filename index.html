@@ -96,11 +96,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚙️ Horas Extras Pro</h1>
+            <h1>⏲️ Horas Extras</h1>
         </div>
 
         <div class="form-group">
-            <label>1. Plantilla Excel</label>
+            <label>1. Seleccionar Excel original</label>
             <input type="file" id="fileInput" accept=".xlsx" style="display: none">
             <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
                 📁 Seleccionar Archivo
@@ -109,8 +109,7 @@
         </div>
 
         <div class="form-group">
-            <label>2. Datos Personales (B24, B25, B26)</label>
-            <input type="text" id="nameInput" placeholder="Nombre y Apellidos (B24)" style="margin-bottom: 10px;">
+            <label>2. Mes y Día</label>
             <div style="display: flex; gap: 10px;">
                 <select id="monthSelect" style="flex: 2;">
                     <option value="ENERO">Enero</option>
@@ -126,27 +125,24 @@
                     <option value="NOVIEMBRE">Noviembre</option>
                     <option value="DICIEMBRE">Diciembre</option>
                 </select>
-                <input type="number" id="yearInput" placeholder="Año" value="2025" style="flex: 1;">
+                <input type="number" id="dayInput" placeholder="Día" min="1" max="31" style="flex: 1;">
             </div>
         </div>
 
         <div class="form-group">
-            <label>3. Registro de Horas (Día + Turno + Cobertura)</label>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="number" id="dayInput" placeholder="Día (1-31)" min="1" max="31" style="flex: 1;">
-                <select id="shiftSelect" style="flex: 2;">
-                    <option value="3">Mañana (Col C)</option>
-                    <option value="4">Tarde (Col D)</option>
-                    <option value="5">Noche (Col E)</option>
-                </select>
-            </div>
+            <label>3. Turno y Cobertura</label>
+            <select id="shiftSelect" style="margin-bottom: 10px;">
+                <option value="3">Mañana (Col C)</option>
+                <option value="4">Tarde (Col D)</option>
+                <option value="5">Noche (Col E)</option>
+            </select>
             <select id="coverageSelect">
                 <option value="Sustitución Operador">Sustitución Operador</option>
                 <option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
             </select>
         </div>
 
-        <button class="btn btn-primary" id="btnProcess">🚀 Procesar y Descargar</button>
+        <button class="btn btn-primary" id="btnProcess">⚙️ Procesar y Descargar</button>
         
         <div id="status"></div>
     </div>
@@ -157,13 +153,10 @@
         const btnProcess = document.getElementById('btnProcess');
         const statusDiv = document.getElementById('status');
 
-        // Set default values
         const now = new Date();
         document.getElementById('dayInput').value = now.getDate();
-        document.getElementById('monthSelect').value = [
-            'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-        ][now.getMonth()];
+        const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        document.getElementById('monthSelect').value = months[now.getMonth()];
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
@@ -173,27 +166,26 @@
 
         function showStatus(msg, type) {
             statusDiv.textContent = msg;
-            statusDiv.className = type + ' success'; // Force class for demo
-            if (type === 'error') statusDiv.className = 'error';
             statusDiv.style.display = 'block';
+            statusDiv.className = 'status ' + type;
+            if (type === 'success') statusDiv.style.backgroundColor = 'rgba(52, 199, 89, 0.15)';
+            if (type === 'error') statusDiv.style.backgroundColor = 'rgba(255, 59, 48, 0.15)';
         }
 
         btnProcess.addEventListener('click', async () => {
             const file = fileInput.files[0];
             if (!file) {
-                showStatus('⚠️ Selecciona primero la plantilla Excel', 'error');
+                showStatus('⚠️ Selecciona primero el archivo Excel', 'error');
                 return;
             }
 
-            const name = document.getElementById('nameInput').value;
             const month = document.getElementById('monthSelect').value;
-            const year = document.getElementById('yearInput').value;
             const day = parseInt(document.getElementById('dayInput').value);
             const shiftCol = parseInt(document.getElementById('shiftSelect').value);
             const coverage = document.getElementById('coverageSelect').value;
 
             if (!day || day < 1 || day > 31) {
-                showStatus('⚠️ Indica un día válido (1-31)', 'error');
+                showStatus('⚠️ Indica un día válido', 'error');
                 return;
             }
 
@@ -204,43 +196,44 @@
                 const arrayBuffer = await file.arrayBuffer();
                 await workbook.xlsx.load(arrayBuffer);
 
-                const worksheet = workbook.getWorksheet(1); // First sheet
+                let worksheet = null;
+                workbook.eachSheet((sheet) => {
+                    if (sheet.name.toUpperCase().startsWith(month)) {
+                        worksheet = sheet;
+                    }
+                });
 
-                // Update headers B24, B25, B26
-                if (name) worksheet.getCell('B24').value = name;
-                worksheet.getCell('B25').value = month;
-                worksheet.getCell('B26').value = year;
+                if (!worksheet) {
+                    showStatus(`❌ No se encontró la hoja para ${month}`, 'error');
+                    return;
+                }
 
-                // Find row for the day
-                // We search in column B (Day numbers)
                 let rowToEdit = -1;
                 worksheet.eachRow((row, rowNumber) => {
-                    const cellVal = row.getCell(2).value; // Column B
+                    const cellVal = row.getCell(2).value;
                     if (cellVal == day) {
                         rowToEdit = rowNumber;
                     }
                 });
 
                 if (rowToEdit !== -1) {
-                    // Update Shift Column (C, D, or E)
-                    worksheet.getRow(rowToEdit).getCell(shiftCol).value = 'X';
-                    // Update Coverage Column P (16)
-                    worksheet.getRow(rowToEdit).getCell(16).value = coverage;
+                    const row = worksheet.getRow(rowToEdit);
+                    row.getCell(shiftCol).value = 'X';
+                    row.getCell(16).value = coverage;
+                    row.commit();
                 } else {
-                    // Fallback to row index if search fails (Day 1 = Row 7 usually)
                     const estimatedRow = day + 6;
-                    worksheet.getRow(estimatedRow).getCell(shiftCol).value = 'X';
-                    worksheet.getRow(estimatedRow).getCell(16).value = coverage;
+                    const row = worksheet.getRow(estimatedRow);
+                    row.getCell(shiftCol).value = 'X';
+                    row.getCell(16).value = coverage;
+                    row.commit();
                 }
 
-                // Generate and download
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                
-                const outFileName = `Horas_Extras_${month}_Día_${day}.xlsx`;
-                saveAs(blob, outFileName);
+                saveAs(blob, `Horas_${month}_Dia_${day}.xlsx`);
 
-                showStatus('✅ ¡Procesado con éxito! El archivo se ha descargado manteniendo el formato original.', 'success');
+                showStatus('✅ ¡Procesado con éxito! Se ha descargado el archivo.', 'success');
             } catch (err) {
                 console.error(err);
                 showStatus('❌ Error: ' + err.message, 'error');
