@@ -52,15 +52,21 @@
         select, input {
             width: 100%;
             padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
+            background: #1a1a1a;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            color: white;
+            color: #ffffff;
             font-size: 16px;
             outline: none;
             transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
         }
-        select:focus, input:focus { border-color: var(--accent-main); background: rgba(255, 255, 255, 0.08); }
+        select:focus, input:focus { border-color: var(--accent-main); background: #222222; }
+        select option {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
         .btn {
             width: 100%;
             padding: 16px;
