@@ -2,280 +2,463 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Horas Extra">
-    <meta name="theme-color" content="#ff6b00">
-    <title>Horas Extraordinarias</title>
-    <!-- ExcelJS for preserving styles -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Gastos - Dropbox</title>
+    <!-- Dropbox SDK -->
+    <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
     <style>
-        :root {
-            --bg-primary: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-            --bg-glass: rgba(26, 26, 26, 0.95);
-            --accent-main: #ff6b00;
-            --accent-hover: #ff8c00;
-            --accent-light: #ffab70;
-            --text-primary: #ffffff;
-            --text-muted: #a0a0a0;
-            --border-accent: rgba(255, 107, 0, 0.3);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             padding: 20px;
-            -webkit-font-smoothing: antialiased;
+            color: white;
         }
         .container {
-            width: 100%;
-            max-width: 500px;
-            background: var(--bg-glass);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            padding: 24px;
-            border-radius: 20px;
-            border: 1px solid var(--border-accent);
-            box-shadow: 0 8px 32px rgba(255, 107, 0, 0.15);
+            max-width: 600px;
+            margin: 0 auto;
         }
-        .header { margin-bottom: 24px; text-align: center; }
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--accent-light); }
-        select, input {
-            width: 100%;
-            padding: 12px;
-            background: #1a1a1a;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: #ffffff;
-            font-size: 16px;
-            outline: none;
-            transition: all 0.2s;
-            -webkit-appearance: none;
-            appearance: none;
+        h1 { 
+            text-align: center; 
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
-        select:focus, input:focus { border-color: var(--accent-main); background: #222222; }
-        select option { background-color: #1a1a1a; color: #ffffff; }
-        .btn {
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        h2 {
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            color: #00d4ff;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #b8b8b8;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        input, select {
             width: 100%;
-            padding: 16px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: white;
+            font-size: 1rem;
+            -webkit-appearance: none;
+        }
+        input:focus, select:focus {
+            outline: 2px solid #00d4ff;
+            outline-offset: 2px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
         }
-        .btn-primary { background: var(--accent-main); color: white; }
-        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
-        .btn-success { background: #34c759; color: white; }
-        .btn-success:hover { background: #28a745; transform: translateY(-1px); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        #status {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 14px;
-            display: block;
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
         }
-        .status-success { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
-        .status-error { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
-        .status-info { background: rgba(255, 255, 255, 0.05); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .info-box {
-            background: rgba(255, 107, 0, 0.1);
-            border-left: 4px solid var(--accent-main);
-            padding: 12px;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,212,255,0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            color: #1a1a1a;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4757, #cc3344);
+            color: white;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
             margin-bottom: 20px;
-            font-size: 13px;
-            color: #ffab70;
-            line-height: 1.4;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+        .status.success { background: rgba(0,255,136,0.2); border: 1px solid #00ff88; }
+        .status.error { background: rgba(255,71,87,0.2); border: 1px solid #ff4757; }
+        .status.info { background: rgba(0,212,255,0.2); border: 1px solid #00d4ff; }
+        
+        .hidden { display: none !important; }
+        
+        .expense-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .expense-item {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .expense-info { flex: 1; }
+        .expense-amount { 
+            font-size: 1.2rem; 
+            font-weight: 700;
+            color: #00ff88;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #00d4ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .file-path-display {
+            background: rgba(0,212,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-size: 0.85rem;
+            color: #00d4ff;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>⏲️ Horas Extras</h1>
-            <p style="color: var(--text-muted); font-size: 14px;">Gestión de partes mensuales</p>
+        <h1>💰 Gestor de Gastos</h1>
+        
+        <div id="status" class="status"></div>
+
+        <!-- LOGIN SECTION -->
+        <div id="loginSection" class="card">
+            <h2>🔐 Conectar con Dropbox</h2>
+            <p style="margin-bottom: 20px; color: #b8b8b8;">
+                Esta app se conecta directamente a tu Dropbox para leer y modificar el archivo en tiempo real.
+            </p>
+            <button class="btn-primary" onclick="login()">
+                Conectar con Dropbox
+            </button>
         </div>
 
-        <div class="info-box">
-            <b>Nota sobre archivos:</b> Los navegadores no permiten sobreescribir archivos directamente por seguridad. Para continuar editando, descarga el resultado y súbelo de nuevo en el paso 1.
-        </div>
+        <!-- APP SECTION -->
+        <div id="appSection" class="hidden">
+            <!-- Configuración archivo -->
+            <div class="card">
+                <h2>📁 Archivo en Dropbox</h2>
+                <label>Ruta del archivo:</label>
+                <input type="text" id="filePath" value="/gastos.csv" placeholder="/carpeta/archivo.csv">
+                <button class="btn-primary" onclick="loadFile()">
+                    Cargar Archivo
+                </button>
+                <button class="btn-danger" onclick="logout()">
+                    Cerrar Sesión
+                </button>
+            </div>
 
-        <div class="form-group">
-            <label>1. Seleccionar Excel original</label>
-            <input type="file" id="fileInput" accept=".xlsx" style="display: none;">
-            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Seleccionar Archivo</button>
-            <div id="fileName" style="font-size: 14px; color: var(--accent-light); margin-top: 8px; text-align: center;">Ningún archivo seleccionado</div>
-        </div>
-
-        <div class="form-group">
-            <label>2. Mes y Día</label>
-            <div style="display: flex; gap: 10px;">
-                <select id="monthSelect" style="flex: 2;">
-                    <option value="ENERO">Enero</option>
-                    <option value="FEBRERO">Febrero</option>
-                    <option value="MARZO">Marzo</option>
-                    <option value="ABRIL">Abril</option>
-                    <option value="MAYO">Mayo</option>
-                    <option value="JUNIO">Junio</option>
-                    <option value="JULIO">Julio</option>
-                    <option value="AGOSTO">Agosto</option>
-                    <option value="SEPTIEMBRE">Septiembre</option>
-                    <option value="OCTUBRE">Octubre</option>
-                    <option value="NOVIEMBRE">Noviembre</option>
-                    <option value="DICIEMBRE">Diciembre</option>
+            <!-- Añadir gasto -->
+            <div id="addExpenseSection" class="card hidden">
+                <h2>➕ Añadir Nuevo Gasto</h2>
+                
+                <label>Fecha:</label>
+                <input type="date" id="fecha">
+                
+                <label>Concepto:</label>
+                <input type="text" id="concepto" placeholder="Ej: Supermercado, Gasolina...">
+                
+                <label>Categoría:</label>
+                <select id="categoria">
+                    <option value="Alimentación">Alimentación</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Vivienda">Vivienda</option>
+                    <option value="Ocio">Ocio</option>
+                    <option value="Salud">Salud</option>
+                    <option value="Educación">Educación</option>
+                    <option value="Otros">Otros</option>
                 </select>
-                <input type="number" id="dayInput" placeholder="Día" min="1" max="31" style="flex: 1;">
+                
+                <label>Importe (€):</label>
+                <input type="number" id="importe" step="0.01" placeholder="0.00">
+                
+                <button class="btn-success" onclick="addExpense()">
+                    Guardar Gasto en Dropbox
+                </button>
+            </div>
+
+            <!-- Lista de gastos -->
+            <div id="expenseListSection" class="card hidden">
+                <h2>📊 Gastos Registrados</h2>
+                <div id="expenseList" class="expense-list">
+                    <p style="text-align: center; color: #b8b8b8;">Carga un archivo para ver los gastos</p>
+                </div>
             </div>
         </div>
-
-        <div class="form-group">
-            <label>3. Turno y Cobertura</label>
-            <select id="shiftSelect" style="margin-bottom: 10px;">
-                <option value="3">Mañana</option>
-                <option value="4">Tarde</option>
-                <option value="5">Noche</option>
-            </select>
-            <select id="coverageSelect">
-                <option value="Sustitución Operador">Sustitución Operador</option>
-                <option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
-            </select>
-        </div>
-
-        <button id="btnProcess" class="btn btn-primary" disabled>⚙️ Añadir Día al Parte</button>
-        <button id="btnDownload" class="btn btn-success" disabled>💾 Descargar Parte Mensual</button>
-
-        <div id="status" class="status-info">Selecciona un archivo para empezar</div>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const fileNameDiv = document.getElementById('fileName');
-        const btnProcess = document.getElementById('btnProcess');
-        const btnDownload = document.getElementById('btnDownload');
-        const statusDiv = document.getElementById('status');
+        // CONFIGURACIÓN - App Key proporcionado por el usuario
+        const CLIENT_ID = 'gp93qf4f6ozo0oh';
+        
+        // Variables globales
+        let dbx = null;
+        let expenses = [];
+        let currentFilePath = '';
 
-        let currentWorkbook = null;
-        let originalFileName = "";
-
-        // Inicializar fecha actual
-        const now = new Date();
-        document.getElementById('dayInput').value = now.getDate();
-        const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-        document.getElementById('monthSelect').value = months[now.getMonth()];
-
-        function showStatus(msg, type) {
-            statusDiv.textContent = msg;
-            statusDiv.className = type ? 'status-' + type : 'status-info';
+        // Mostrar/ocultar secciones
+        function showSection(id) {
+            document.querySelectorAll('.card').forEach(el => {
+                if (!el.id.includes('Section') || el.id === 'loginSection') return;
+            });
         }
 
-        fileInput.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                originalFileName = file.name;
-                fileNameDiv.textContent = '✅ ' + originalFileName;
-                showStatus('⏳ Cargando archivo...', '');
+        // Mostrar estado
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            if (type !== 'info') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // LOGIN - OAuth2 Dropbox
+        function login() {
+            const redirectUri = window.location.origin + window.location.pathname;
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            window.location.href = authUrl;
+        }
+
+        // LOGOUT
+        function logout() {
+            localStorage.removeItem('dropbox_token');
+            dbx = null;
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+            showStatus('Sesión cerrada correctamente', 'info');
+        }
+
+        // Verificar token al cargar la página
+        window.onload = function() {
+            // Verificar si viene de OAuth (token en URL)
+            const hash = window.location.hash;
+            if (hash) {
+                const params = new URLSearchParams(hash.substring(1));
+                const token = params.get('access_token');
+                if (token) {
+                    localStorage.setItem('dropbox_token', token);
+                    window.location.hash = ''; // Limpiar URL
+                }
+            }
+
+            // Verificar si hay token guardado
+            const token = localStorage.getItem('dropbox_token');
+            if (token) {
+                dbx = new Dropbox.Dropbox({ accessToken: token });
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('appSection').classList.remove('hidden');
+                showStatus('✅ Conectado a Dropbox', 'success');
                 
-                try {
-                    currentWorkbook = new ExcelJS.Workbook();
-                    await currentWorkbook.xlsx.load(await file.arrayBuffer());
-                    btnProcess.disabled = false;
-                    btnDownload.disabled = false;
-                    showStatus('✅ Archivo listo. Añade días y descarga al terminar.', 'success');
-                } catch (err) {
-                    showStatus('❌ Error al cargar archivo: ' + err.message, 'error');
-                }
+                // Establecer fecha de hoy
+                document.getElementById('fecha').valueAsDate = new Date();
             }
-        });
+        };
 
-        btnProcess.addEventListener('click', async () => {
-            if (!currentWorkbook) return;
+        // Cargar archivo desde Dropbox
+        async function loadFile() {
+            if (!dbx) {
+                showStatus('Error: No estás conectado a Dropbox', 'error');
+                return;
+            }
 
-            const month = document.getElementById('monthSelect').value;
-            const day = parseInt(document.getElementById('dayInput').value);
-            const shiftCol = parseInt(document.getElementById('shiftSelect').value);
-            const coverage = document.getElementById('coverageSelect').value;
+            const path = document.getElementById('filePath').value.trim();
+            if (!path) {
+                showStatus('Introduce la ruta del archivo', 'error');
+                return;
+            }
 
-            showStatus('⏳ Buscando fila...', '');
+            currentFilePath = path;
+            showStatus('📂 Cargando archivo...', 'info');
 
             try {
-                let worksheet = null;
-                currentWorkbook.eachSheet(s => {
-                    if (s.name.toUpperCase().includes(month)) worksheet = s;
-                });
-
-                if (!worksheet) {
-                    showStatus(`❌ No se encontró la hoja para ${month}`, 'error');
-                    return;
+                const response = await dbx.filesDownload({ path: path });
+                const blob = response.result.fileBlob;
+                const content = await blob.text();
+                
+                // Parsear CSV
+                parseCSV(content);
+                
+                // Mostrar secciones
+                document.getElementById('addExpenseSection').classList.remove('hidden');
+                document.getElementById('expenseListSection').classList.remove('hidden');
+                
+                showStatus('✅ Archivo cargado correctamente', 'success');
+                displayExpenses();
+                
+            } catch (error) {
+                if (error.status === 409) {
+                    showStatus('El archivo no existe. Se creará uno nuevo al guardar el primer gasto.', 'info');
+                    expenses = [['Fecha', 'Concepto', 'Categoría', 'Importe']]; // Headers
+                    document.getElementById('addExpenseSection').classList.remove('hidden');
+                    document.getElementById('expenseListSection').classList.remove('hidden');
+                    displayExpenses();
+                } else {
+                    showStatus('Error: ' + error.message, 'error');
+                    console.error(error);
                 }
+            }
+        }
 
-                let rowToEdit = -1;
-                worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-                    if (rowNumber < 5 || rowNumber > 50) return;
-                    
-                    const cell = row.getCell(2);
-                    let val = cell.value;
-                    let numVal = null;
-
-                    if (val instanceof Date) numVal = val.getDate();
-                    else if (typeof val === 'number') numVal = val;
-                    else if (cell.type === 6 && cell.result) {
-                        if (cell.result instanceof Date) numVal = cell.result.getDate();
-                        else if (typeof cell.result === 'number') numVal = cell.result;
-                    } else if (typeof val === 'string') {
-                        const p = parseInt(val.trim());
-                        if (!isNaN(p)) numVal = p;
+        // Parsear CSV
+        function parseCSV(content) {
+            const lines = content.trim().split('
+');
+            expenses = lines.map(line => {
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let char of line) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
                     }
+                }
+                values.push(current.trim());
+                return values;
+            });
+            
+            // Si está vacío, añadir headers
+            if (expenses.length === 0) {
+                expenses = [['Fecha', 'Concepto', 'Categoría', 'Importe']];
+            }
+        }
 
-                    if (numVal === day) rowToEdit = rowNumber;
+        // Convertir a CSV
+        function toCSV() {
+            return expenses.map(row => 
+                row.map(cell => {
+                    const cellStr = String(cell);
+                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('
+')) {
+                        return `"${cellStr.replace(/"/g, '""')}"`;
+                    }
+                    return cellStr;
+                }).join(',')
+            ).join('
+');
+        }
+
+        // Añadir gasto
+        async function addExpense() {
+            const fecha = document.getElementById('fecha').value;
+            const concepto = document.getElementById('concepto').value.trim();
+            const categoria = document.getElementById('categoria').value;
+            const importe = document.getElementById('importe').value;
+
+            // Validaciones
+            if (!fecha) {
+                showStatus('Selecciona una fecha', 'error');
+                return;
+            }
+            if (!concepto) {
+                showStatus('Introduce el concepto', 'error');
+                return;
+            }
+            if (!importe || parseFloat(importe) <= 0) {
+                showStatus('Introduce un importe válido', 'error');
+                return;
+            }
+
+            // Formatear fecha española
+            const fechaObj = new Date(fecha);
+            const fechaFormateada = fechaObj.toLocaleDateString('es-ES');
+
+            // Añadir a array
+            expenses.push([fechaFormateada, concepto, categoria, importe]);
+
+            showStatus('💾 Guardando en Dropbox...', 'info');
+
+            try {
+                // Convertir a CSV y subir
+                const csvContent = toCSV();
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                
+                await dbx.filesUpload({
+                    path: currentFilePath || '/gastos.csv',
+                    contents: blob,
+                    mode: { '.tag': 'overwrite' }, // <-- SOBRESCRIBIR
+                    autorename: false
                 });
 
-                if (rowToEdit === -1) {
-                    // Fallback basado en el patrón detectado: Día 1 suele estar en Fila 7
-                    rowToEdit = day + 6;
-                }
-
-                const row = worksheet.getRow(rowToEdit);
-                [3, 4, 5].forEach(c => row.getCell(c).value = null);
-                row.getCell(shiftCol).value = 'X';
-                row.getCell(16).value = coverage;
-
-                showStatus(`✅ Día ${day} añadido. ¡No olvides descargar al terminar!`, 'success');
-            } catch (err) {
-                showStatus('❌ Error: ' + err.message, 'error');
+                // Limpiar formulario
+                document.getElementById('concepto').value = '';
+                document.getElementById('importe').value = '';
+                
+                displayExpenses();
+                showStatus('✅ Gasto guardado correctamente en Dropbox', 'success');
+                
+            } catch (error) {
+                showStatus('Error al guardar: ' + error.message, 'error');
+                console.error(error);
             }
-        });
+        }
 
-        btnDownload.addEventListener('click', async () => {
-            if (!currentWorkbook) return;
-            showStatus('⏳ Generando archivo...', '');
-            try {
-                // Configuración para evitar avisos de corrupción en Excel
-                const buffer = await currentWorkbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                saveAs(blob, originalFileName);
-                showStatus('✅ ¡Descargado!', 'success');
-            } catch (err) {
-                showStatus('❌ Error al descargar: ' + err.message, 'error');
+        // Mostrar lista de gastos
+        function displayExpenses() {
+            const container = document.getElementById('expenseList');
+            
+            if (expenses.length <= 1) {
+                container.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No hay gastos registrados</p>';
+                return;
             }
-        });
+
+            let html = '';
+            // Mostrar últimos 10 gastos (sin contar header)
+            const recentExpenses = expenses.slice(-10).reverse();
+            
+            recentExpenses.forEach(row => {
+                if (row[0] === 'Fecha') return; // Saltar header
+                
+                html += `
+                    <div class="expense-item">
+                        <div class="expense-info">
+                            <div style="font-weight: 600;">${row[1]}</div>
+                            <div style="font-size: 0.85rem; color: #888;">${row[0]} · ${row[2]}</div>
+                        </div>
+                        <div class="expense-amount">-${parseFloat(row[3]).toFixed(2)}€</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
     </script>
 </body>
 </html>
