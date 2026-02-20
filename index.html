@@ -77,12 +77,13 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            margin-bottom: 12px;
         }
         .btn-primary { background: var(--accent-main); color: white; }
         .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
-        .btn-success { background: #34c759; color: white; margin-top: 12px; }
+        .btn-success { background: #34c759; color: white; }
         .btn-success:hover { background: #28a745; transform: translateY(-1px); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; margin-bottom: 12px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         #status {
             margin-top: 20px;
             padding: 12px;
@@ -98,13 +99,18 @@
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>⏲️ Horas Extras</h1></div>
+        <div class="header">
+            <h1>⏲️ Horas Extras</h1>
+            <p style="color: var(--text-muted); font-size: 14px;">Gestión de partes mensuales</p>
+        </div>
+
         <div class="form-group">
             <label>1. Seleccionar Excel original</label>
             <input type="file" id="fileInput" accept=".xlsx" style="display: none;">
             <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Seleccionar Archivo</button>
-            <div id="fileName" style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 4px;">Ningún archivo seleccionado</div>
+            <div id="fileName" style="font-size: 14px; color: var(--accent-light); margin-top: 8px; text-align: center;">Ningún archivo seleccionado</div>
         </div>
+
         <div class="form-group">
             <label>2. Mes y Día</label>
             <div style="display: flex; gap: 10px;">
@@ -125,22 +131,26 @@
                 <input type="number" id="dayInput" placeholder="Día" min="1" max="31" style="flex: 1;">
             </div>
         </div>
+
         <div class="form-group">
             <label>3. Turno y Cobertura</label>
             <select id="shiftSelect" style="margin-bottom: 10px;">
-                <option value="3">Mañana (Col C)</option>
-                <option value="4">Tarde (Col D)</option>
-                <option value="5">Noche (Col E)</option>
+                <option value="3">Mañana</option>
+                <option value="4">Tarde</option>
+                <option value="5">Noche</option>
             </select>
             <select id="coverageSelect">
                 <option value="Sustitución Operador">Sustitución Operador</option>
                 <option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
             </select>
         </div>
-        <button class="btn btn-primary" id="btnProcess">⚙️ Añadir Día al Parte</button>
-        <button class="btn btn-success" id="btnDownload" style="display: none;">💾 Descargar Parte Mensual</button>
+
+        <button id="btnProcess" class="btn btn-primary" disabled>⚙️ Añadir Día al Parte</button>
+        <button id="btnDownload" class="btn btn-success" disabled>💾 Descargar Parte Mensual</button>
+
         <div id="status" class="status-info">Selecciona un archivo para empezar</div>
     </div>
+
     <script>
         const fileInput = document.getElementById('fileInput');
         const fileNameDiv = document.getElementById('fileName');
@@ -151,6 +161,7 @@
         let currentWorkbook = null;
         let originalFileName = "";
 
+        // Inicializar fecha actual
         const now = new Date();
         document.getElementById('dayInput').value = now.getDate();
         const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
@@ -167,10 +178,13 @@
                 originalFileName = file.name;
                 fileNameDiv.textContent = '✅ ' + originalFileName;
                 showStatus('⏳ Cargando archivo...', '');
+                
                 try {
                     currentWorkbook = new ExcelJS.Workbook();
                     await currentWorkbook.xlsx.load(await file.arrayBuffer());
-                    showStatus('✅ Archivo cargado y listo para añadir días', 'success');
+                    btnProcess.disabled = false;
+                    btnDownload.disabled = false;
+                    showStatus('✅ Archivo listo. Añade días y descarga al terminar.', 'success');
                 } catch (err) {
                     showStatus('❌ Error al cargar archivo: ' + err.message, 'error');
                 }
@@ -178,51 +192,75 @@
         });
 
         btnProcess.addEventListener('click', async () => {
-            if (!currentWorkbook) { showStatus('⚠️ Selecciona primero el archivo Excel', 'error'); return; }
+            if (!currentWorkbook) return;
 
             const month = document.getElementById('monthSelect').value;
             const day = parseInt(document.getElementById('dayInput').value);
             const shiftCol = parseInt(document.getElementById('shiftSelect').value);
             const coverage = document.getElementById('coverageSelect').value;
 
-            showStatus('⏳ Modificando...', '');
+            showStatus('⏳ Buscando fila...', '');
 
             try {
                 let worksheet = null;
-                currentWorkbook.eachSheet(s => { if (s.name.toUpperCase().startsWith(month)) worksheet = s; });
+                currentWorkbook.eachSheet(s => {
+                    if (s.name.toUpperCase().includes(month)) worksheet = s;
+                });
 
-                if (!worksheet) { showStatus(`❌ No se encontró la hoja para ${month}`, 'error'); return; }
+                if (!worksheet) {
+                    showStatus(`❌ No se encontró la hoja para ${month}`, 'error');
+                    return;
+                }
 
                 let rowToEdit = -1;
-                const fallbackRow = day + 6;
+                // Lógica de búsqueda mejorada: 
+                // Buscamos el número del día en la columna 2, priorizando el rango de calendario (filas 7-40)
+                // Si Day 22 iba a fila 16, es que row = day - 6. 
+                // Si Day 29 iba a fila 23, es que row = day - 6.
+                // Intentaremos detectar este patrón dinámicamente.
                 
-                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+                    if (rowNumber < 5 || rowNumber > 50) return; // Rango razonable
+                    
                     const cell = row.getCell(2);
                     let val = cell.value;
                     let numVal = null;
-                    if (cell.type === 4 || val instanceof Date) numVal = (val instanceof Date ? val : val).getDate();
-                    else if (cell.type === 6) {
-                        const r = cell.result;
-                        if (r instanceof Date) numVal = r.getDate();
-                        else if (typeof r === 'number') numVal = r;
-                    } else if (typeof val === 'number') numVal = val;
-                    else if (typeof val === 'string') {
+
+                    // Extraer número de día de la celda
+                    if (val instanceof Date) numVal = val.getDate();
+                    else if (typeof val === 'number') numVal = val;
+                    else if (cell.type === 6 && cell.result) { // Formula result
+                        if (cell.result instanceof Date) numVal = cell.result.getDate();
+                        else if (typeof cell.result === 'number') numVal = cell.result;
+                    } else if (typeof val === 'string') {
                         const p = parseInt(val.trim());
                         if (!isNaN(p)) numVal = p;
                     }
-                    if (numVal === rowNumber && numVal !== fallbackRow && rowNumber < 32) numVal = null;
-                    if (numVal === day) rowToEdit = rowNumber;
+
+                    if (numVal === day) {
+                        rowToEdit = rowNumber;
+                    }
                 });
 
-                if (rowToEdit === -1) rowToEdit = fallbackRow;
+                // Fallback si no se encuentra: el usuario dice que Day 22 -> Row 16, Day 29 -> Row 23.
+                // Esto sugiere row = day - 6. 
+                // Pero lo más común es row = day + 6 (si Day 1 está en Row 7).
+                // Si no se encuentra coincidencia exacta, probamos el patrón detectado por el usuario.
+                if (rowToEdit === -1) {
+                    showStatus('⚠️ No se detectó el día en Col B. Usando cálculo manual...', '');
+                    rowToEdit = day - 6; 
+                    if (rowToEdit < 1) rowToEdit = day + 6; // Segundo fallback
+                }
 
                 const row = worksheet.getRow(rowToEdit);
+                // Limpiar columnas de turno (3,4,5 correspondientes a C,D,E)
                 [3, 4, 5].forEach(c => row.getCell(c).value = null);
+                
+                // Marcar turno y cobertura (Col 16 es P)
                 row.getCell(shiftCol).value = 'X';
                 row.getCell(16).value = coverage;
 
-                btnDownload.style.display = 'flex';
-                showStatus(`✅ Día ${day} añadido al archivo. Puedes seguir añadiendo más días o descargar el resultado final.`, 'success');
+                showStatus(`✅ Día ${day} añadido. ¡No olvides descargar al terminar!`, 'success');
             } catch (err) {
                 showStatus('❌ Error: ' + err.message, 'error');
             }
@@ -230,11 +268,12 @@
 
         btnDownload.addEventListener('click', async () => {
             if (!currentWorkbook) return;
-            showStatus('⏳ Generando archivo final...', '');
+            showStatus('⏳ Generando archivo...', '');
             try {
                 const buffer = await currentWorkbook.xlsx.writeBuffer();
+                // Usar el nombre original
                 saveAs(new Blob([buffer]), originalFileName);
-                showStatus('✅ ¡Parte mensual descargado!', 'success');
+                showStatus('✅ ¡Descargado! Sube este archivo para seguir editando.', 'success');
             } catch (err) {
                 showStatus('❌ Error al descargar: ' + err.message, 'error');
             }
