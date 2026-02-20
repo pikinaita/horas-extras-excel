@@ -63,10 +63,7 @@
             appearance: none;
         }
         select:focus, input:focus { border-color: var(--accent-main); background: #222222; }
-        select option {
-            background-color: #1a1a1a;
-            color: #ffffff;
-        }
+        select option { background-color: #1a1a1a; color: #ffffff; }
         .btn {
             width: 100%;
             padding: 16px;
@@ -83,6 +80,8 @@
         }
         .btn-primary { background: var(--accent-main); color: white; }
         .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-success { background: #34c759; color: white; margin-top: 12px; }
+        .btn-success:hover { background: #28a745; transform: translateY(-1px); }
         .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; margin-bottom: 12px; }
         #status {
             margin-top: 20px;
@@ -137,48 +136,60 @@
                 <option value="Sustitución Jefe de Turno">Sustitución Jefe de Turno</option>
             </select>
         </div>
-        <button class="btn btn-primary" id="btnProcess">⚙️ Procesar y Descargar</button>
+        <button class="btn btn-primary" id="btnProcess">⚙️ Añadir Día al Parte</button>
+        <button class="btn btn-success" id="btnDownload" style="display: none;">💾 Descargar Parte Mensual</button>
         <div id="status"></div>
     </div>
     <script>
         const fileInput = document.getElementById('fileInput');
         const fileNameDiv = document.getElementById('fileName');
         const btnProcess = document.getElementById('btnProcess');
+        const btnDownload = document.getElementById('btnDownload');
         const statusDiv = document.getElementById('status');
+
+        let currentWorkbook = null;
+        let originalFileName = "";
 
         const now = new Date();
         document.getElementById('dayInput').value = now.getDate();
         const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
         document.getElementById('monthSelect').value = months[now.getMonth()];
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) fileNameDiv.textContent = '✅ ' + e.target.files[0].name;
+        fileInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                originalFileName = file.name;
+                fileNameDiv.textContent = '✅ ' + originalFileName;
+                showStatus('⏳ Cargando archivo...', '');
+                try {
+                    currentWorkbook = new ExcelJS.Workbook();
+                    await currentWorkbook.xlsx.load(await file.arrayBuffer());
+                    showStatus('✅ Archivo cargado y listo', 'success');
+                } catch (err) {
+                    showStatus('❌ Error al cargar archivo: ' + err.message, 'error');
+                }
+            }
         });
 
         function showStatus(msg, type) {
             statusDiv.textContent = msg;
             statusDiv.style.display = 'block';
             statusDiv.className = 'status-' + type;
-            if (!type) statusDiv.style.display = 'block';
         }
 
         btnProcess.addEventListener('click', async () => {
-            const file = fileInput.files[0];
-            if (!file) { showStatus('⚠️ Selecciona el archivo Excel', 'error'); return; }
+            if (!currentWorkbook) { showStatus('⚠️ Selecciona primero el archivo Excel', 'error'); return; }
 
             const month = document.getElementById('monthSelect').value;
             const day = parseInt(document.getElementById('dayInput').value);
             const shiftCol = parseInt(document.getElementById('shiftSelect').value);
             const coverage = document.getElementById('coverageSelect').value;
 
-            showStatus('⏳ Procesando...', '');
+            showStatus('⏳ Modificando...', '');
 
             try {
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(await file.arrayBuffer());
-
                 let worksheet = null;
-                workbook.eachSheet(s => { if (s.name.toUpperCase().startsWith(month)) worksheet = s; });
+                currentWorkbook.eachSheet(s => { if (s.name.toUpperCase().startsWith(month)) worksheet = s; });
 
                 if (!worksheet) { showStatus(`❌ No se encontró la hoja para ${month}`, 'error'); return; }
 
@@ -189,7 +200,6 @@
                     const cell = row.getCell(2);
                     let val = cell.value;
                     let numVal = null;
-
                     if (cell.type === 4 || val instanceof Date) numVal = (val instanceof Date ? val : val).getDate();
                     else if (cell.type === 6) {
                         const r = cell.result;
@@ -200,26 +210,33 @@
                         const p = parseInt(val.trim());
                         if (!isNaN(p)) numVal = p;
                     }
-
                     if (numVal === rowNumber && numVal !== fallbackRow && rowNumber < 32) numVal = null;
                     if (numVal === day) rowToEdit = rowNumber;
                 });
 
                 if (rowToEdit === -1) rowToEdit = fallbackRow;
 
-                showStatus(`📝 Editando día ${day} en fila ${rowToEdit}...`, '');
-                
                 const row = worksheet.getRow(rowToEdit);
                 [3, 4, 5].forEach(c => row.getCell(c).value = null);
                 row.getCell(shiftCol).value = 'X';
                 row.getCell(16).value = coverage;
 
-                const buffer = await workbook.xlsx.writeBuffer();
-                saveAs(new Blob([buffer]), `Horas_${month}_Dia_${day}.xlsx`);
-                showStatus('✅ ¡Procesado con éxito!', 'success');
+                btnDownload.style.display = 'flex';
+                showStatus(`✅ Día ${day} añadido correctamente. Puedes seguir añadiendo días o descargar el archivo.`, 'success');
             } catch (err) {
-                console.error(err);
                 showStatus('❌ Error: ' + err.message, 'error');
+            }
+        });
+
+        btnDownload.addEventListener('click', async () => {
+            if (!currentWorkbook) return;
+            showStatus('⏳ Generando descarga...', '');
+            try {
+                const buffer = await currentWorkbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), originalFileName || 'Parte_Horas_Extras.xlsx');
+                showStatus('✅ Archivo descargado con éxito', 'success');
+            } catch (err) {
+                showStatus('❌ Error al descargar: ' + err.message, 'error');
             }
         });
     </script>
