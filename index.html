@@ -98,7 +98,6 @@
         .btn-primary { background: var(--accent-main); color: white; }
         .btn-success { background: #34c759; color: white; }
         .btn-danger { background: #ff3b30; color: white; }
-        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; }
 
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -135,9 +134,9 @@
         <div id="appSection" class="hidden">
             <div class="card">
                 <label>Archivo en Dropbox:</label>
-                <input type="text" id="filePath" value="/parte_horas.xlsx" placeholder="/ruta/archivo.xlsx">
+                <input type="text" id="filePath" value="/Sg/Copia-de-partes-ramon-2026.xlsx" placeholder="/ruta/archivo.xlsx">
                 <button class="btn btn-primary" style="margin-top: 12px;" onclick="loadAndPrepare()">📂 Cargar y Vincular</button>
-                <button class="btn btn-danger" style="margin-top: 8px; padding: 10px; font-size: 13px;" onclick="logout()">🚪 Cerrar Sesión (Reset Token)</button>
+                <button class="btn btn-danger" style="margin-top: 8px; padding: 10px; font-size: 13px;" onclick="logout()">🚪 Cerrar Sesión</button>
             </div>
 
             <div id="editorSection" class="hidden">
@@ -206,10 +205,7 @@
 
         function logout() {
             localStorage.removeItem('dropbox_token');
-            showStatus('Sesión cerrada. Por favor, vuelve a conectar.', 'info');
-            setTimeout(() => {
-                location.href = window.location.origin + window.location.pathname;
-            }, 1000);
+            location.reload();
         }
 
         window.onload = function() {
@@ -251,11 +247,7 @@
                 document.getElementById('editorSection').classList.remove('hidden');
                 showStatus('✅ Archivo vinculado. Puedes añadir datos.', 'success');
             } catch (err) {
-                if (err.status === 401) {
-                    showStatus('❌ Sesión expirada o token no válido. Pulsa "Cerrar Sesión" y conecta de nuevo.', 'error');
-                } else {
-                    showStatus('❌ Error al cargar: ' + err.message, 'error');
-                }
+                showStatus('❌ Error al cargar: ' + err.message, 'error');
             }
         }
 
@@ -305,6 +297,7 @@
                 row.getCell(shiftCol).value = 'X';
                 row.getCell(16).value = coverage;
 
+                // FIX: Configuración para evitar avisos de corrupción en Excel
                 const buffer = await currentWorkbook.xlsx.writeBuffer();
                 
                 await dbx.filesUpload({
