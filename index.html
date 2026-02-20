@@ -89,10 +89,11 @@
             border-radius: 12px;
             text-align: center;
             font-size: 14px;
-            display: none;
+            display: block;
         }
         .status-success { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
         .status-error { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
+        .status-info { background: rgba(255, 255, 255, 0.05); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
 <body>
@@ -138,7 +139,7 @@
         </div>
         <button class="btn btn-primary" id="btnProcess">⚙️ Añadir Día al Parte</button>
         <button class="btn btn-success" id="btnDownload" style="display: none;">💾 Descargar Parte Mensual</button>
-        <div id="status"></div>
+        <div id="status" class="status-info">Selecciona un archivo para empezar</div>
     </div>
     <script>
         const fileInput = document.getElementById('fileInput');
@@ -155,6 +156,11 @@
         const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
         document.getElementById('monthSelect').value = months[now.getMonth()];
 
+        function showStatus(msg, type) {
+            statusDiv.textContent = msg;
+            statusDiv.className = type ? 'status-' + type : 'status-info';
+        }
+
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
@@ -164,18 +170,12 @@
                 try {
                     currentWorkbook = new ExcelJS.Workbook();
                     await currentWorkbook.xlsx.load(await file.arrayBuffer());
-                    showStatus('✅ Archivo cargado y listo', 'success');
+                    showStatus('✅ Archivo cargado y listo para añadir días', 'success');
                 } catch (err) {
                     showStatus('❌ Error al cargar archivo: ' + err.message, 'error');
                 }
             }
         });
-
-        function showStatus(msg, type) {
-            statusDiv.textContent = msg;
-            statusDiv.style.display = 'block';
-            statusDiv.className = 'status-' + type;
-        }
 
         btnProcess.addEventListener('click', async () => {
             if (!currentWorkbook) { showStatus('⚠️ Selecciona primero el archivo Excel', 'error'); return; }
@@ -222,7 +222,7 @@
                 row.getCell(16).value = coverage;
 
                 btnDownload.style.display = 'flex';
-                showStatus(`✅ Día ${day} añadido correctamente. Puedes seguir añadiendo días o descargar el archivo.`, 'success');
+                showStatus(`✅ Día ${day} añadido al archivo. Puedes seguir añadiendo más días o descargar el resultado final.`, 'success');
             } catch (err) {
                 showStatus('❌ Error: ' + err.message, 'error');
             }
@@ -230,11 +230,11 @@
 
         btnDownload.addEventListener('click', async () => {
             if (!currentWorkbook) return;
-            showStatus('⏳ Generando descarga...', '');
+            showStatus('⏳ Generando archivo final...', '');
             try {
                 const buffer = await currentWorkbook.xlsx.writeBuffer();
-                saveAs(new Blob([buffer]), originalFileName || 'Parte_Horas_Extras.xlsx');
-                showStatus('✅ Archivo descargado con éxito', 'success');
+                saveAs(new Blob([buffer]), originalFileName);
+                showStatus('✅ ¡Parte mensual descargado!', 'success');
             } catch (err) {
                 showStatus('❌ Error al descargar: ' + err.message, 'error');
             }
