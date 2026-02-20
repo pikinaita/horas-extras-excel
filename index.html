@@ -83,6 +83,7 @@
         .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
         .btn-success { background: #34c759; color: white; }
         .btn-success:hover { background: #28a745; transform: translateY(-1px); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         #status {
             margin-top: 20px;
@@ -95,6 +96,15 @@
         .status-success { background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3); }
         .status-error { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); }
         .status-info { background: rgba(255, 255, 255, 0.05); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .info-box {
+            background: rgba(255, 107, 0, 0.1);
+            border-left: 4px solid var(--accent-main);
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #ffab70;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -102,6 +112,10 @@
         <div class="header">
             <h1>⏲️ Horas Extras</h1>
             <p style="color: var(--text-muted); font-size: 14px;">Gestión de partes mensuales</p>
+        </div>
+
+        <div class="info-box">
+            <b>Nota sobre archivos:</b> Los navegadores no permiten sobreescribir archivos directamente por seguridad. Para continuar editando, descarga el resultado y súbelo de nuevo en el paso 1.
         </div>
 
         <div class="form-group">
@@ -213,23 +227,16 @@
                 }
 
                 let rowToEdit = -1;
-                // Lógica de búsqueda mejorada: 
-                // Buscamos el número del día en la columna 2, priorizando el rango de calendario (filas 7-40)
-                // Si Day 22 iba a fila 16, es que row = day - 6. 
-                // Si Day 29 iba a fila 23, es que row = day - 6.
-                // Intentaremos detectar este patrón dinámicamente.
-                
                 worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-                    if (rowNumber < 5 || rowNumber > 50) return; // Rango razonable
+                    if (rowNumber < 5 || rowNumber > 50) return;
                     
                     const cell = row.getCell(2);
                     let val = cell.value;
                     let numVal = null;
 
-                    // Extraer número de día de la celda
                     if (val instanceof Date) numVal = val.getDate();
                     else if (typeof val === 'number') numVal = val;
-                    else if (cell.type === 6 && cell.result) { // Formula result
+                    else if (cell.type === 6 && cell.result) {
                         if (cell.result instanceof Date) numVal = cell.result.getDate();
                         else if (typeof cell.result === 'number') numVal = cell.result;
                     } else if (typeof val === 'string') {
@@ -237,26 +244,16 @@
                         if (!isNaN(p)) numVal = p;
                     }
 
-                    if (numVal === day) {
-                        rowToEdit = rowNumber;
-                    }
+                    if (numVal === day) rowToEdit = rowNumber;
                 });
 
-                // Fallback si no se encuentra: el usuario dice que Day 22 -> Row 16, Day 29 -> Row 23.
-                // Esto sugiere row = day - 6. 
-                // Pero lo más común es row = day + 6 (si Day 1 está en Row 7).
-                // Si no se encuentra coincidencia exacta, probamos el patrón detectado por el usuario.
                 if (rowToEdit === -1) {
-                    showStatus('⚠️ No se detectó el día en Col B. Usando cálculo manual...', '');
-                    rowToEdit = day - 6; 
-                    if (rowToEdit < 1) rowToEdit = day + 6; // Segundo fallback
+                    // Fallback basado en el patrón detectado: Día 1 suele estar en Fila 7
+                    rowToEdit = day + 6;
                 }
 
                 const row = worksheet.getRow(rowToEdit);
-                // Limpiar columnas de turno (3,4,5 correspondientes a C,D,E)
                 [3, 4, 5].forEach(c => row.getCell(c).value = null);
-                
-                // Marcar turno y cobertura (Col 16 es P)
                 row.getCell(shiftCol).value = 'X';
                 row.getCell(16).value = coverage;
 
@@ -270,10 +267,11 @@
             if (!currentWorkbook) return;
             showStatus('⏳ Generando archivo...', '');
             try {
+                // Configuración para evitar avisos de corrupción en Excel
                 const buffer = await currentWorkbook.xlsx.writeBuffer();
-                // Usar el nombre original
-                saveAs(new Blob([buffer]), originalFileName);
-                showStatus('✅ ¡Descargado! Sube este archivo para seguir editando.', 'success');
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, originalFileName);
+                showStatus('✅ ¡Descargado!', 'success');
             } catch (err) {
                 showStatus('❌ Error al descargar: ' + err.message, 'error');
             }
