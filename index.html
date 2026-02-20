@@ -8,7 +8,6 @@
     <meta name="apple-mobile-web-app-title" content="Horas Extra">
     <title>Horas Extraordinarias - Dropbox</title>
     
-    <!-- Librerías -->
     <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     
@@ -99,7 +98,8 @@
         .btn-primary { background: var(--accent-main); color: white; }
         .btn-success { background: #34c759; color: white; }
         .btn-danger { background: #ff3b30; color: white; }
-        
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: white; }
+
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         #status {
@@ -127,20 +127,17 @@
 
         <div id="status"></div>
 
-        <!-- Login Section -->
         <div id="loginSection" class="card">
             <p style="margin-bottom: 16px; font-size: 14px; text-align: center;">Conecta tu cuenta para editar el archivo original.</p>
             <button class="btn btn-primary" onclick="login()">🔐 Conectar con Dropbox</button>
         </div>
 
-        <!-- App Section -->
         <div id="appSection" class="hidden">
             <div class="card">
                 <label>Archivo en Dropbox:</label>
                 <input type="text" id="filePath" value="/parte_horas.xlsx" placeholder="/ruta/archivo.xlsx">
-                <p style="font-size: 11px; color: var(--text-muted); mt: 5px;">Asegúrate de que la ruta sea correcta.</p>
                 <button class="btn btn-primary" style="margin-top: 12px;" onclick="loadAndPrepare()">📂 Cargar y Vincular</button>
-                <button class="btn btn-secondary" style="background: transparent; font-size: 13px;" onclick="logout()">Cerrar Sesión</button>
+                <button class="btn btn-danger" style="margin-top: 8px; padding: 10px; font-size: 13px;" onclick="logout()">🚪 Cerrar Sesión (Reset Token)</button>
             </div>
 
             <div id="editorSection" class="hidden">
@@ -209,7 +206,10 @@
 
         function logout() {
             localStorage.removeItem('dropbox_token');
-            location.reload();
+            showStatus('Sesión cerrada. Por favor, vuelve a conectar.', 'info');
+            setTimeout(() => {
+                location.href = window.location.origin + window.location.pathname;
+            }, 1000);
         }
 
         window.onload = function() {
@@ -229,7 +229,6 @@
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
                 
-                // Fecha por defecto
                 const now = new Date();
                 const months = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
                 document.getElementById('dayInput').value = now.getDate();
@@ -252,7 +251,11 @@
                 document.getElementById('editorSection').classList.remove('hidden');
                 showStatus('✅ Archivo vinculado. Puedes añadir datos.', 'success');
             } catch (err) {
-                showStatus('❌ Error al cargar: ' + err.message, 'error');
+                if (err.status === 401) {
+                    showStatus('❌ Sesión expirada o token no válido. Pulsa "Cerrar Sesión" y conecta de nuevo.', 'error');
+                } else {
+                    showStatus('❌ Error al cargar: ' + err.message, 'error');
+                }
             }
         }
 
@@ -273,11 +276,8 @@
                     if (s.name.toUpperCase().includes(month)) worksheet = s;
                 });
 
-                if (!worksheet) {
-                    throw new Error(`No se encontró la hoja para ${month}`);
-                }
+                if (!worksheet) throw new Error(`No se encontró la hoja para ${month}`);
 
-                // Lógica de búsqueda de fila idéntica a la app anterior
                 let rowToEdit = -1;
                 worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
                     if (rowNumber < 5 || rowNumber > 50) return;
@@ -298,20 +298,15 @@
                     if (numVal === day) rowToEdit = rowNumber;
                 });
 
-                if (rowToEdit === -1) rowToEdit = day + 6; // Fallback
+                if (rowToEdit === -1) rowToEdit = day + 6;
 
                 const row = worksheet.getRow(rowToEdit);
-                // Limpiar celdas de turno (X)
                 [3, 4, 5].forEach(c => row.getCell(c).value = null);
-                // Marcar turno
                 row.getCell(shiftCol).value = 'X';
-                // Poner cobertura en columna 16
                 row.getCell(16).value = coverage;
 
-                // Generar buffer XLSX
                 const buffer = await currentWorkbook.xlsx.writeBuffer();
                 
-                // SUBIR Y SOBRESCRIBIR EN DROPBOX
                 await dbx.filesUpload({
                     path: path,
                     contents: buffer,
