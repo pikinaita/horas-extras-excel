@@ -1,0 +1,9 @@
+# Configuracion de Netlify para despliegue directo del HTML
+[build]
+  publish = "."
+  command = "echo 'No build needed - static HTML'"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
