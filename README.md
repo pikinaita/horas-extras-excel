@@ -1,5 +1,7 @@
 # Horas Extraordinarias — Dropbox + Excel
 
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/pikinaita/horas-extras-excel)
+
 App web para registrar horas extraordinarias directamente en un archivo Excel alojado en Dropbox. **Sin instalaciones, sin backend** — todo funciona en el navegador (PC, móvil, iPhone).
 
 ## Funcionalidades
