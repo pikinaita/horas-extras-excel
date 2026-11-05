@@ -267,8 +267,7 @@ class HorasExtrasApp:
                 wb.save(dest)
                 wb.close()
                 self._status_var.set(f"Registrado: {day} de {month} ({shift})")
-                messagebox.showinfo("Éxito", f"Datos guardados en:
-{dest}")
+                messagebox.showinfo("Éxito", f"Datos guardados en:\n{dest}")
         except PermissionError:
             messagebox.showerror("Archivo bloqueado", "Cierre el archivo Excel antes de registrar.")
         except Exception as e:
