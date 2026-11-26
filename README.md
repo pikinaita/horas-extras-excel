@@ -7,7 +7,8 @@ App web para registrar horas extraordinarias directamente en un archivo Excel al
 ## Funcionalidades
 
 - Autenticación OAuth 2.0 con Dropbox (token guardado en `localStorage`)
-- Descarga y manipula el `.xlsx` original directamente desde Dropbox
+- Descarga y modifica archivos `.xlsx` y `.xlsm` directamente desde Dropbox
+- Conserva las macros VBA de los `.xlsm` al cambiar únicamente las celdas del registro
 - Detecta automáticamente el **mes y día actual**
 - Permite registrar turno (Mañana / Tarde / Noche) y tipo de cobertura
 - Escribe directamente en la celda del día correspondiente
@@ -64,7 +65,7 @@ La app aparecerá en tu pantalla de inicio como cualquier otra app.
 1. Abre la app desde el icono
 2. Toca **Conectar con Dropbox** → autorizas
 3. Vuelves a la app automáticamente (token guardado)
-4. Introduce la ruta del archivo Excel (ej. `/Sg/Partes2026.xlsx`)
+4. Introduce la ruta del archivo Excel (ej. `/Sg/Partes2026.xlsx` o `/Sg/Partes2026.xlsm`)
 5. Pulsa **Cargar y Vincular**
 6. Selecciona mes, día, turno y cobertura
 7. **Guardar en Archivo Original** → el Excel se actualiza en Dropbox instantáneamente
@@ -94,16 +95,19 @@ Luego en el iPhone, abre Safari y ve a `http://IP-DE-TU-PC:8000`.
 horas-extras-excel/
 ├── index.html          # App completa (HTML + CSS + JS)
 ├── netlify.toml        # Configuración de Netlify
-├── main.py             # Versión Python (obsoleta para web)
+├── main.py             # Versión Python de escritorio (.xlsx y .xlsm)
 ├── requirements.txt    # Dependencias Python (no usadas en web)
 └── README.md
 ```
+
+La versión de escritorio también conserva las macros al guardar archivos `.xlsm` y usa la extensión de origen al guardar una copia.
 
 ## Tecnologías
 
 - HTML5 + JavaScript puro (sin frameworks)
 - [Dropbox SDK](https://www.dropbox.com/developers/documentation/http/overview) — OAuth + API de ficheros
 - [ExcelJS](https://github.com/exceljs/exceljs) — Lectura y escritura de `.xlsx` en el navegador
+- [JSZip](https://stuk.github.io/jszip/) — Actualización de celdas en `.xlsm` conservando el resto del libro y sus macros
 - PWA optimizada para iPhone con meta tags Apple
 
 ## Notas

@@ -107,7 +107,7 @@ class HorasExtrasApp:
         ttk.Label(self.container, text="Indique la ruta del libro Excel con los partes mensuales.", style="Sub.TLabel").pack(anchor="w", pady=(0, 14))
         ttk.Separator(self.container).pack(fill=tk.X, pady=(0, 16))
 
-        ttk.Label(self.container, text="Ruta del archivo (.xlsx):").pack(anchor="w", pady=(0, 4))
+        ttk.Label(self.container, text="Ruta del archivo (.xlsx o .xlsm):").pack(anchor="w", pady=(0, 4))
         row = ttk.Frame(self.container)
         row.pack(fill=tk.X, pady=(0, 20))
 
@@ -232,9 +232,11 @@ class HorasExtrasApp:
         coverage = self._cov_var.get()
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
-                temp_path = os.path.join(tmp_dir, "temp_partes.xlsx")
+                is_macro_enabled = self.filepath.lower().endswith(".xlsm")
+                temp_extension = ".xlsm" if is_macro_enabled else ".xlsx"
+                temp_path = os.path.join(tmp_dir, "temp_partes" + temp_extension)
                 copy2(self.filepath, temp_path)
-                wb = openpyxl.load_workbook(temp_path, keep_vba=True)
+                wb = openpyxl.load_workbook(temp_path, keep_vba=is_macro_enabled)
                 ws = self._find_sheet(wb, month)
                 if ws is None:
                     messagebox.showerror("Hoja no encontrada", f"No existe hoja para '{month}'")
@@ -259,11 +261,18 @@ class HorasExtrasApp:
                 else:
                     dest = filedialog.asksaveasfilename(
                         title="Guardar copia del parte",
-                        defaultextension=".xlsx",
+                        defaultextension=temp_extension,
                         initialfile=os.path.basename(self.filepath),
                         filetypes=[("Libros Excel", "*.xlsx *.xlsm"), ("Todos los archivos", "*.*")]
                     )
                     if not dest: wb.close(); return
+                    if not dest.lower().endswith(temp_extension):
+                        wb.close()
+                        messagebox.showerror(
+                            "Formato incompatible",
+                            f"Para conservar el formato del archivo, la copia debe terminar en {temp_extension}."
+                        )
+                        return
                 wb.save(dest)
                 wb.close()
                 self._status_var.set(f"Registrado: {day} de {month} ({shift})")
