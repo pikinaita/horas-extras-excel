@@ -9,6 +9,7 @@
     <title>Horas Extraordinarias - Dropbox</title>
     
     <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     
     <style>
@@ -121,7 +122,7 @@
     <div class="container">
         <div class="header">
             <h1>⏲️ Horas Extras</h1>
-            <p class="subtitle">Gestión directa en Dropbox (.xlsx)</p>
+            <p class="subtitle">Gestión directa en Dropbox (.xlsx y .xlsm)</p>
         </div>
 
         <div id="status"></div>
@@ -133,8 +134,8 @@
 
         <div id="appSection" class="hidden">
             <div class="card">
-                <label>Archivo en Dropbox:</label>
-                <input type="text" id="filePath" value="/Sg/Partes2026.xlsx" placeholder="/ruta/archivo.xlsx">
+                <label>Archivo en Dropbox (.xlsx o .xlsm):</label>
+                <input type="text" id="filePath" value="/Sg/Partes2026.xlsx" placeholder="/ruta/archivo.xlsx o .xlsm">
                 <button class="btn btn-primary" style="margin-top: 12px;" onclick="loadAndPrepare()">📂 Cargar y Vincular</button>
                 <button class="btn btn-danger" style="margin-top: 8px; padding: 10px; font-size: 13px;" onclick="logout()">🚪 Cerrar Sesión</button>
             </div>
@@ -187,8 +188,138 @@
 
     <script>
         const CLIENT_ID = 'gp93qf4f6ozo0oh';
+        const XLSX_MAIN_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+        const XLSX_REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
         let dbx = null;
         let currentWorkbook = null;
+        let currentFileData = null;
+
+        function parseXml(xml) {
+            const xmlDocument = new DOMParser().parseFromString(xml, 'application/xml');
+            if (xmlDocument.getElementsByTagName('parsererror').length) {
+                throw new Error('El archivo Excel contiene XML no válido.');
+            }
+            return xmlDocument;
+        }
+
+        function resolveZipPath(basePath, target) {
+            const parts = target.startsWith('/')
+                ? target.slice(1).split('/')
+                : basePath.split('/').slice(0, -1).concat(target.split('/'));
+            const resolved = [];
+            parts.forEach(part => {
+                if (!part || part === '.') return;
+                if (part === '..') resolved.pop();
+                else resolved.push(part);
+            });
+            return resolved.join('/');
+        }
+
+        function columnNumber(cellReference) {
+            const match = cellReference.match(/^[A-Z]+/i);
+            if (!match) throw new Error(`Referencia de celda no válida: ${cellReference}`);
+            return Array.from(match[0].toUpperCase()).reduce(
+                (number, letter) => number * 26 + letter.charCodeAt(0) - 64,
+                0
+            );
+        }
+
+        function columnLetters(number) {
+            let letters = '';
+            while (number > 0) {
+                const remainder = (number - 1) % 26;
+                letters = String.fromCharCode(65 + remainder) + letters;
+                number = Math.floor((number - 1) / 26);
+            }
+            return letters;
+        }
+
+        function getOrCreateRow(sheetData, rowNumber, xmlDocument) {
+            const rows = Array.from(sheetData.getElementsByTagNameNS(XLSX_MAIN_NS, 'row'));
+            let row = rows.find(item => Number(item.getAttribute('r')) === rowNumber);
+            if (row) return row;
+
+            row = xmlDocument.createElementNS(XLSX_MAIN_NS, 'row');
+            row.setAttribute('r', String(rowNumber));
+            const nextRow = rows.find(item => Number(item.getAttribute('r')) > rowNumber);
+            if (nextRow) sheetData.insertBefore(row, nextRow);
+            else sheetData.appendChild(row);
+            return row;
+        }
+
+        function getOrCreateCell(row, cellReference, xmlDocument) {
+            const wantedColumn = columnNumber(cellReference);
+            const cells = Array.from(row.children).filter(item => item.localName === 'c');
+            let cell = cells.find(item => item.getAttribute('r') === cellReference);
+            if (cell) return cell;
+
+            cell = xmlDocument.createElementNS(XLSX_MAIN_NS, 'c');
+            cell.setAttribute('r', cellReference);
+            const nextCell = cells.find(item => columnNumber(item.getAttribute('r')) > wantedColumn);
+            if (nextCell) row.insertBefore(cell, nextCell);
+            else row.appendChild(cell);
+            return cell;
+        }
+
+        function setCellValue(cell, value, xmlDocument) {
+            Array.from(cell.children).forEach(child => {
+                if (['f', 'v', 'is'].includes(child.localName)) cell.removeChild(child);
+            });
+
+            if (value === null) {
+                cell.removeAttribute('t');
+                return;
+            }
+
+            cell.setAttribute('t', 'inlineStr');
+            const inlineString = xmlDocument.createElementNS(XLSX_MAIN_NS, 'is');
+            const text = xmlDocument.createElementNS(XLSX_MAIN_NS, 't');
+            text.textContent = value;
+            inlineString.appendChild(text);
+            cell.insertBefore(inlineString, cell.firstChild);
+        }
+
+        async function writeXlsmPreservingMacros(sheetName, rowNumber, shiftColumn, coverage) {
+            const zip = await JSZip.loadAsync(currentFileData);
+            const workbookPath = 'xl/workbook.xml';
+            const workbookFile = zip.file(workbookPath);
+            const relationshipsFile = zip.file('xl/_rels/workbook.xml.rels');
+            if (!workbookFile || !relationshipsFile) {
+                throw new Error('No se pudo encontrar la estructura del libro Excel.');
+            }
+
+            const workbookXml = parseXml(await workbookFile.async('string'));
+            const relationshipsXml = parseXml(await relationshipsFile.async('string'));
+            const sheet = Array.from(workbookXml.getElementsByTagNameNS(XLSX_MAIN_NS, 'sheet'))
+                .find(item => item.getAttribute('name') === sheetName);
+            if (!sheet) throw new Error(`No se encontró la hoja ${sheetName} en el archivo.`);
+
+            const relationshipId = sheet.getAttributeNS(XLSX_REL_NS, 'id') || sheet.getAttribute('r:id');
+            const relationship = Array.from(relationshipsXml.getElementsByTagName('*'))
+                .find(item => item.getAttribute('Id') === relationshipId);
+            if (!relationship) throw new Error(`No se encontró la relación de la hoja ${sheetName}.`);
+
+            const worksheetPath = resolveZipPath('xl/workbook.xml', relationship.getAttribute('Target'));
+            const worksheetFile = zip.file(worksheetPath);
+            if (!worksheetFile) throw new Error(`No se encontró el contenido de la hoja ${sheetName}.`);
+
+            const worksheetXml = parseXml(await worksheetFile.async('string'));
+            const sheetData = worksheetXml.getElementsByTagNameNS(XLSX_MAIN_NS, 'sheetData')[0];
+            if (!sheetData) throw new Error(`La hoja ${sheetName} no contiene datos editables.`);
+
+            const row = getOrCreateRow(sheetData, rowNumber, worksheetXml);
+            [3, 4, 5].forEach(column => {
+                const reference = `${columnLetters(column)}${rowNumber}`;
+                setCellValue(getOrCreateCell(row, reference, worksheetXml), null, worksheetXml);
+            });
+            const shiftReference = `${columnLetters(shiftColumn)}${rowNumber}`;
+            const coverageReference = `P${rowNumber}`;
+            setCellValue(getOrCreateCell(row, shiftReference, worksheetXml), 'X', worksheetXml);
+            setCellValue(getOrCreateCell(row, coverageReference, worksheetXml), coverage, worksheetXml);
+
+            zip.file(worksheetPath, new XMLSerializer().serializeToString(worksheetXml));
+            return zip.generateAsync({ type: 'arraybuffer' });
+        }
 
         function showStatus(msg, type) {
             const statusDiv = document.getElementById('status');
@@ -237,10 +368,14 @@
             showStatus('⏳ Descargando archivo desde Dropbox...', 'info');
 
             try {
+                if (!/\.(xlsx|xlsm)$/i.test(path)) {
+                    throw new Error('Selecciona un archivo con extensión .xlsx o .xlsm.');
+                }
                 const response = await dbx.filesDownload({ path: path });
                 const blob = response.result.fileBlob;
                 const arrayBuffer = await blob.arrayBuffer();
 
+                currentFileData = arrayBuffer.slice(0);
                 currentWorkbook = new ExcelJS.Workbook();
                 await currentWorkbook.xlsx.load(arrayBuffer);
 
@@ -297,8 +432,10 @@
                 row.getCell(shiftCol).value = 'X';
                 row.getCell(16).value = coverage;
 
-                // FIX: Configuración para evitar avisos de corrupción en Excel
-                const buffer = await currentWorkbook.xlsx.writeBuffer();
+                const isMacroEnabled = /\.xlsm$/i.test(path);
+                const buffer = isMacroEnabled
+                    ? await writeXlsmPreservingMacros(worksheet.name, rowToEdit, shiftCol, coverage)
+                    : await currentWorkbook.xlsx.writeBuffer();
                 
                 await dbx.filesUpload({
                     path: path,
@@ -307,6 +444,7 @@
                     autorename: false
                 });
 
+                if (isMacroEnabled) currentFileData = buffer.slice(0);
                 showStatus(`✅ Día ${day} guardado directamente en Dropbox.`, 'success');
             } catch (err) {
                 showStatus('❌ Error: ' + err.message, 'error');
